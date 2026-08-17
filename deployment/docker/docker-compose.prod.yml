@@ -1,0 +1,27 @@
+version: "3.9"
+
+# Production-ish compose: no dev mounts, immutable images.
+# Requires the images to be built first:
+#   docker build -f backend/Dockerfile -t ragingoa-backend .          (repo root context)
+#   docker build -f frontend/Dockerfile -t ragingoa-frontend frontend
+
+services:
+  backend:
+    image: ragingoa-backend
+    env_file:
+      - ../backend/.env
+    environment:
+      VECTOR_DB_ROUTER: ${VECTOR_DB_ROUTER:-dev}
+      STT_ROUTER: ${STT_ROUTER:-dev}
+      LLM_ROUTER: ${LLM_ROUTER:-dev}
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+  frontend:
+    image: ragingoa-frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    restart: unless-stopped

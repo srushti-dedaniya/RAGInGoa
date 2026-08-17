@@ -1,0 +1,9 @@
+fastapi>=0.110
+uvicorn[standard]>=0.29
+gunicorn>=21.2
+pydantic>=2.6
+pydantic-settings>=2.2
+python-multipart>=0.0.9
+openai>=1.30
+
+# Core RAG comes from the sibling `rag/` package (see ../rag/requirements.txt).

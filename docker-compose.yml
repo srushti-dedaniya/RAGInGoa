@@ -1,0 +1,46 @@
+version: "3.9"
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    env_file:
+      - ./backend/.env.example
+    environment:
+      VECTOR_DB_ROUTER: dev
+      STT_ROUTER: dev
+      LLM_ROUTER: dev
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./rag:/rag
+      - ./backend:/app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: runner
+    environment:
+      VITE_API_BASE_URL: http://localhost:8000
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+
+  # Optional real vector engine. RAGInGoa defaults to the in-memory dev router
+  # so a cold clone works out of the box. Point VECTOR_DB_ROUTER at one of these.
+  # qdrant:
+  #   image: qdrant/qdrant
+  #   ports: ["6333:6333"]
+  #
+  # milvus:
+  #   image: milvusdb/milvus:v2.4.4
+  #   ports: ["19530:19530"]

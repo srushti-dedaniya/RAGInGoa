@@ -1,0 +1,6 @@
+numpy>=1.24
+# --- Optional providers (install to unlock real engines) ---
+# sentence-transformers>=2.6   # real embeddings
+# chromadb>=0.4                 # chromadb vector store
+# openai>=1.30                  # real LLM grounding
+# jupyter>=1.0                  # notebooks

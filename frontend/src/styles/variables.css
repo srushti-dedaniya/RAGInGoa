@@ -1,0 +1,38 @@
+:root {
+  /* Material-ish palette (matches design tokens in tailwind.config.js) */
+  --color-background: #fdf8f8;
+  --color-surface: #fdf8f8;
+  --color-surface-container-low: #f7f2f2;
+  --color-surface-container: #f1edec;
+  --color-surface-container-high: #ece7e7;
+  --color-surface-container-highest: #e6e1e1;
+  --color-on-surface: #1c1b1b;
+  --color-on-surface-variant: #3f4941;
+  --color-primary: #00512c;
+  --color-primary-container: #086b3d;
+  --color-on-primary: #ffffff;
+  --color-tertiary: #8c0046;
+  --color-tertiary-container: #b7005e;
+  --color-on-tertiary: #ffffff;
+  --color-accent-yellow: #ffd600;
+  --color-error: #ba1a1a;
+  --color-outline: #6f7a70;
+  --color-outline-variant: #bec9be;
+
+  /* Typography */
+  --font-display: "Outfit", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Manrope", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  /* Layout */
+  --space-gutter: 24px;
+  --margin-mobile: 16px;
+  --margin-desktop: 48px;
+  --radius-sm: 0.25rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+
+  /* Elevation */
+  --shadow-offset: 3px 3px 0 0 var(--color-primary-container);
+  --shadow-offset-hover: 1px 1px 0 0 var(--color-primary-container);
+}

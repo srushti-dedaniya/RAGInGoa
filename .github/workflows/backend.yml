@@ -1,0 +1,32 @@
+name: Backend
+
+on:
+  push:
+    branches: [main]
+    paths: ["backend/**", "rag/**", ".github/workflows/backend.yml"]
+  pull_request:
+    paths: ["backend/**", "rag/**", ".github/workflows/backend.yml"]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - name: Install dependencies
+        run: |
+          pip install -r rag/requirements.txt
+          pip install -r backend/requirements.txt
+          pip install -r requirements-dev.txt
+      - name: Syntax check
+        run: |
+          python -c "import ast, pathlib; [ast.parse(p.read_text(encoding='utf-8')) for p in pathlib.Path('backend').rglob('*.py') if p.name != 'email.py']"
+          python -c "import ast, pathlib; [ast.parse(p.read_text(encoding='utf-8')) for p in pathlib.Path('rag').rglob('*.py')]"
+      - name: Build index
+        run: python scripts/build_index.py
+      - name: Run backend + integration tests
+        run: python -m pytest tests/backend tests/integration -q
+      - name: Run rag tests
+        run: python -m pytest tests/rag -q

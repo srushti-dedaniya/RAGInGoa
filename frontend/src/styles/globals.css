@@ -1,0 +1,98 @@
+@import "./fonts.css";
+@import "./variables.css";
+@import "./animations.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  [id] {
+    scroll-margin-top: 96px;
+  }
+
+  body {
+    font-family: var(--font-body);
+    background-color: var(--color-background);
+    color: var(--color-on-surface);
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+    line-height: 1.6;
+  }
+
+  /* Clear, high-contrast keyboard focus ring everywhere */
+  :focus-visible {
+    outline: 3px solid var(--color-tertiary);
+    outline-offset: 2px;
+  }
+
+  button:focus-visible,
+  a:focus-visible,
+  input:focus-visible,
+  select:focus-visible {
+    outline: 3px solid var(--color-tertiary);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background: var(--color-accent-yellow);
+    color: var(--color-on-surface);
+  }
+
+  .font-display-xl {
+    font-family: var(--font-display);
+  }
+
+  /* Comfortable touch targets on interactive controls */
+  button {
+    min-height: 44px;
+  }
+}
+
+@layer components {
+  .offset-shadow {
+    box-shadow: var(--shadow-offset);
+    transition: all 0.2s ease-in-out;
+  }
+
+  .offset-shadow:hover {
+    box-shadow: var(--shadow-offset-hover);
+    transform: translate(2px, 2px);
+  }
+
+  .offset-shadow-sm {
+    box-shadow: 2px 2px 0 0 var(--color-primary-container);
+    transition: all 0.2s ease-in-out;
+  }
+
+  .offset-shadow-sm:hover {
+    box-shadow: 1px 1px 0 0 var(--color-primary-container);
+    transform: translate(1px, 1px);
+  }
+
+  .dotted-border {
+    border: 1px dotted var(--color-primary);
+  }
+
+  .dotted-border-b {
+    border-bottom: 1px dotted var(--color-primary);
+  }
+
+  .glassmorphism {
+    background: rgba(8, 107, 61, 0.1);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(8, 107, 61, 0.2);
+  }
+
+  .chip {
+    @apply font-meta-mono text-meta-mono uppercase px-3 py-1 rounded-full border border-primary;
+  }
+
+  .section-anchor {
+    @apply font-meta-mono text-meta-mono uppercase text-on-surface-variant hover:text-primary transition-colors;
+  }
+}

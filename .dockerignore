@@ -1,0 +1,16 @@
+.git
+.gitignore
+**/node_modules
+**/dist
+**/__pycache__
+**/*.pyc
+**/.venv
+**/.env
+rag/data/raw
+rag/vector_db/index/*.npy
+rag/vector_db/index/*.json
+rag/benchmarking/results/*.json
+docs
+tests
+.github
+!.env.example

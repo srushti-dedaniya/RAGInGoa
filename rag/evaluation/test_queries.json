@@ -1,0 +1,52 @@
+[
+  {
+    "query": "When is the best time to visit Palolem?",
+    "expected_topic": "beaches",
+    "expected_sources_hint": ["Palolem"]
+  },
+  {
+    "query": "What food should I try in Goa?",
+    "expected_topic": "food",
+    "expected_sources_hint": ["Goa Food Primer"]
+  },
+  {
+    "query": "How do I get to Dudhsagar Falls?",
+    "expected_topic": "travel",
+    "expected_sources_hint": ["Dudhsagar"]
+  },
+  {
+    "query": "Where is the Latin Quarter of Panaji?",
+    "expected_topic": "heritage",
+    "expected_sources_hint": ["Fontainhas"]
+  },
+  {
+    "query": "Which church holds the remains of Saint Francis Xavier?",
+    "expected_topic": "heritage",
+    "expected_sources_hint": ["Basilica"]
+  },
+  {
+    "query": "What is the cheapest way to get around Goa?",
+    "expected_topic": "transport",
+    "expected_sources_hint": ["Transport"]
+  },
+  {
+    "query": "Where can I see turtle nesting beaches?",
+    "expected_topic": "beaches",
+    "expected_sources_hint": ["Agonda"]
+  },
+  {
+    "query": "When do the night markets in Goa peak?",
+    "expected_topic": "food",
+    "expected_sources_hint": ["Markets"]
+  },
+  {
+    "query": "Are there evening cruises on the Mandovi?",
+    "expected_topic": "travel",
+    "expected_sources_hint": ["Mandovi"]
+  },
+  {
+    "query": "What is bebinca?",
+    "expected_topic": "food",
+    "expected_sources_hint": ["bebinca"]
+  }
+]

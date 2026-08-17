@@ -1,0 +1,50 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+.env
+.env.local
+*.env
+!.env.example
+*.log
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+build/
+dist/
+
+# --- Node ---
+node_modules/
+frontend/dist/
+*.local
+npm-debug.log*
+
+# --- Editor / OS ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# --- Data (large artifacts) ---
+rag/data/raw/*.jsonl
+rag/data/raw/*.csv
+rag/data/processed/*.npy
+rag/data/processed/*.parquet
+rag/data/processed/*.jsonl
+!rag/data/processed/.gitkeep
+rag/vector_db/index/*
+!rag/vector_db/index/.gitkeep
+rag/vector_db/test-*/
+rag/benchmarking/results/*.json
+!rag/benchmarking/results/.gitkeep
+
+# --- Docker / runtime ---
+*.pid
+*.sock
+.vercel/
+netlify.toml
