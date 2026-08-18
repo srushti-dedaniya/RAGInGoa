@@ -1,5 +1,3 @@
-import { formatConfidence } from "../../utils/formatLatency";
-
 export default function SourceCard({ source, index = 0 }) {
   const meta = source.metadata || {};
   const title = meta.title || `Source ${index + 1}`;
@@ -21,19 +19,6 @@ export default function SourceCard({ source, index = 0 }) {
 
       <p className="font-body-md text-body-md text-on-surface-variant text-sm line-clamp-3">{source.text}</p>
 
-      <div className="mt-auto flex items-center justify-between pt-2 border-t border-dotted border-outline-variant">
-        <span className="font-meta-mono text-meta-mono uppercase text-secondary">
-          {formatConfidence(source.score)} · {source.score_type}
-        </span>
-        <button
-          type="button"
-          onClick={() => navigator.clipboard?.writeText(source.chunk_id)}
-          className="font-label-caps text-label-caps uppercase text-tertiary hover:underline"
-          title={`Copy chunk id: ${source.chunk_id}`}
-        >
-          cite
-        </button>
-      </div>
     </article>
   );
 }

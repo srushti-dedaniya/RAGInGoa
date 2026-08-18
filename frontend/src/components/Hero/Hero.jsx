@@ -33,7 +33,7 @@ export default function Hero() {
   return (
     <section
       id="top"
-      className="relative min-h-[90vh] flex flex-col justify-center items-center px-margin-mobile md:px-margin-desktop py-20"
+      className="relative min-h-[65vh] flex flex-col justify-center items-center px-margin-mobile md:px-margin-desktop py-14"
     >
       <div className="text-center z-10 max-w-4xl mx-auto staggered-item" style={{ animationDelay: "0.1s" }}>
         <div className="flex flex-wrap justify-center gap-4 mb-8">
@@ -55,7 +55,7 @@ export default function Hero() {
         </p>
       </div>
 
-      <div className="relative mt-20 staggered-item w-full max-w-md aspect-square flex items-center justify-center" style={{ animationDelay: "0.3s" }}>
+      <div className="relative mt-10 staggered-item w-full max-w-sm aspect-square flex items-center justify-center" style={{ animationDelay: "0.3s" }}>
         <div className="absolute inset-0 border border-dotted border-primary rounded-full spin-slow opacity-50" />
 
         {ORBIT_LABELS.map((orbit) => (

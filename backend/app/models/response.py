@@ -36,9 +36,9 @@ class LatencyBreakdown(BaseModel):
 
 
 class EngineInfo(BaseModel):
-    stt: str = "dev"
-    llm: str = "dev"
-    vector_db: str = "dev"
+    stt: str = "not-run"
+    llm: str = "not-run"
+    vector_db: str = "not-run"
     embedding: str = ""
 
 

@@ -23,6 +23,7 @@ from .services import (
     RAGService,
     RetrievalService,
     STTService,
+    TTSService,
 )
 
 logger = logging.getLogger("ragingoa")
@@ -38,6 +39,7 @@ class Services:
         self.settings = settings
         self.embedder = get_embedder(model_name=settings.EMBEDDING_MODEL, dim=settings.EMBEDDING_DIM)
         self.stt = STTService(settings)
+        self.tts = TTSService(settings)
         self.retrieval = RetrievalService(settings, self.embedder)
         self.generation = GenerationService(settings)
         self.guardrails = GuardrailService(settings, embedder=self.embedder)
@@ -70,6 +72,9 @@ class Services:
 
     def benchmark(self, queries: list[str] | None, top_k: int | None) -> dict:
         return self.rag.benchmark(queries, top_k)
+
+    def synthesize(self, text: str, language_code: str) -> bytes:
+        return self.tts.synthesize(text, language_code)
 
     def health(self) -> dict:
         return self.rag.health()

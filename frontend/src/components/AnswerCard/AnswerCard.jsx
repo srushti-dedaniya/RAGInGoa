@@ -1,22 +1,93 @@
+import { useEffect, useRef, useState } from "react";
 import { formatLatency } from "../../utils/formatLatency";
 import { formatTime } from "../../utils/formatTime";
+import { ragService } from "../../services/ragService";
 import Icon from "../Icon/Icon";
 
-export default function AnswerCard({ result, isProcessing = false }) {
+export function cleanAnswer(text = "") {
+  return text
+    .replace(/\s*\[Source:\s*[^\]]+\]/gi, "")
+    .replace(/\bmsmarco-xi-[\w-]+\b/gi, "")
+    .replace(/\s+([.,!?।])/g, "$1")
+    .trim();
+}
+
+export default function AnswerCard({ result, isProcessing = false, languageCode = "en-IN" }) {
+  const [audioState, setAudioState] = useState("idle");
+  const [audioError, setAudioError] = useState("");
+  const audioRef = useRef(null);
+  const audioUrlRef = useRef("");
+
+  const releaseAudio = () => {
+    audioRef.current?.pause();
+    audioRef.current = null;
+    if (audioUrlRef.current) URL.revokeObjectURL(audioUrlRef.current);
+    audioUrlRef.current = "";
+  };
+
+  useEffect(() => {
+    releaseAudio();
+    setAudioState("idle");
+    setAudioError("");
+    return releaseAudio;
+  }, [result?.answer, languageCode]);
+
   if (!result) return null;
 
   const breakdown = result.latency_breakdown || {};
-  const engine = result.engine || {};
+  const visibleAnswer = cleanAnswer(result.answer);
+
+  const listen = async () => {
+    setAudioError("");
+    if (audioState === "playing") {
+      audioRef.current?.pause();
+      setAudioState("paused");
+      return;
+    }
+    if (audioRef.current) {
+      if (audioRef.current.ended) audioRef.current.currentTime = 0;
+      await audioRef.current.play();
+      setAudioState("playing");
+      return;
+    }
+    setAudioState("loading");
+    try {
+      const blob = await ragService.synthesize(visibleAnswer, { languageCode });
+      releaseAudio();
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      audioUrlRef.current = url;
+      audioRef.current = audio;
+      audio.onended = () => setAudioState("ready");
+      audio.onerror = () => {
+        setAudioError("The generated audio could not be played.");
+        setAudioState("error");
+      };
+      await audio.play();
+      setAudioState("playing");
+    } catch (error) {
+      releaseAudio();
+      setAudioError(error.message || "Unable to read this answer aloud.");
+      setAudioState("error");
+    }
+  };
+
+  const stop = () => {
+    if (audioRef.current) audioRef.current.currentTime = 0;
+    audioRef.current?.pause();
+    setAudioState("ready");
+  };
 
   return (
     <article className="relative border-2 border-primary bg-surface-container-low rounded-xl p-6 offset-shadow" id="answer">
       <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
         <div className="flex items-center gap-3">
-          <Icon name="verified" size={22} className="text-primary" />
-          <h3 className="font-headline-lg text-headline-lg-mobile uppercase text-primary">Grounded Answer</h3>
+          <Icon name={result.grounded ? "verified" : "info"} size={22} className="text-primary" />
+          <h3 className="font-headline-lg text-headline-lg-mobile uppercase text-primary">
+            {result.grounded ? "Answer" : "Insufficient Context"}
+          </h3>
         </div>
         <div className="flex items-center gap-2 font-meta-mono text-meta-mono uppercase">
-          <span className="chip bg-surface-variant">{result.grounded ? "Grounded" : "Not grounded"}</span>
           <span className="chip bg-surface-variant">{formatTime()}</span>
         </div>
       </div>
@@ -29,22 +100,33 @@ export default function AnswerCard({ result, isProcessing = false }) {
       ) : (
         <>
           <p className="font-body-md text-body-md text-on-surface whitespace-pre-line leading-relaxed" aria-live="polite">
-            {result.answer}
+            {visibleAnswer}
           </p>
+
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={listen}
+              disabled={audioState === "loading" || !visibleAnswer}
+              aria-label={audioState === "playing" ? "Pause answer" : "Listen to answer"}
+              className="chip border border-primary bg-surface text-primary hover:bg-primary hover:text-on-primary transition-colors disabled:opacity-50"
+            >
+              <span aria-hidden="true">{audioState === "playing" ? "⏸" : "🔊"}</span>
+              {audioState === "loading" ? "Preparing…" : audioState === "playing" ? "Pause" : audioState === "paused" ? "Resume" : audioState === "ready" ? "Replay" : "Listen"}
+            </button>
+            {(audioState === "playing" || audioState === "paused") && (
+              <button type="button" onClick={stop} className="chip border border-outline-variant bg-surface text-on-surface-variant hover:border-primary">
+                Stop
+              </button>
+            )}
+            {audioError && <span role="alert" className="font-meta-mono text-meta-mono text-error">{audioError}</span>}
+          </div>
 
           <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <LatencyTile label="Retrieval" ms={breakdown.retrieval} icon="database" />
             <LatencyTile label="Generation" ms={breakdown.generation} icon="auto_awesome" />
             <LatencyTile label="Guardrails" ms={breakdown.guardrails} icon="verified_user" />
             <LatencyTile label="Total" ms={breakdown.total} icon="timer" highlight />
-          </div>
-
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            <span className="font-label-caps text-label-caps uppercase text-secondary">Engine</span>
-            <EngineChip label="STT" value={engine.stt} />
-            <EngineChip label="LLM" value={engine.llm} />
-            <EngineChip label="VectorDB" value={engine.vector_db} />
-            <EngineChip label="Embedding" value={engine.embedding} />
           </div>
 
           {result.warnings?.length > 0 && (
@@ -73,13 +155,5 @@ function LatencyTile({ label, ms, icon, highlight = false }) {
       </div>
       <div className="font-body-bold text-body-bold">{formatLatency(ms)}</div>
     </div>
-  );
-}
-
-function EngineChip({ label, value }) {
-  return (
-    <span className="chip bg-surface text-on-surface-variant">
-      {label}: <span className="text-primary">{value || "—"}</span>
-    </span>
   );
 }

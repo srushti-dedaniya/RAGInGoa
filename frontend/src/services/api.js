@@ -10,7 +10,11 @@ export async function apiPost(path, body, timeoutMs = 20000) {
   return apiRequest(path, { method: "POST", body, timeoutMs });
 }
 
-export async function apiRequest(path, { method = "GET", body = null, timeoutMs = 8000 } = {}) {
+export async function apiPostBlob(path, body, timeoutMs = 30000) {
+  return apiRequest(path, { method: "POST", body, timeoutMs, responseType: "blob" });
+}
+
+export async function apiRequest(path, { method = "GET", body = null, timeoutMs = 8000, responseType = "json" } = {}) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -30,7 +34,7 @@ export async function apiRequest(path, { method = "GET", body = null, timeoutMs 
       }
       throw new Error(detail);
     }
-    return await response.json();
+    return responseType === "blob" ? await response.blob() : await response.json();
   } catch (error) {
     if (error?.name === "AbortError") {
       throw new Error("The request timed out. Check that the backend is running and try again.");

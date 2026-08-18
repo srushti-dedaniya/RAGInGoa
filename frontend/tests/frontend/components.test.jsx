@@ -16,7 +16,7 @@ describe("SourceCard", () => {
     render(<SourceCard source={source} index={0} />);
     expect(screen.getByText("Palolem Beach Guide")).toBeInTheDocument();
     expect(screen.getByText("beaches")).toBeInTheDocument();
-    expect(screen.getByText(/33%/)).toBeInTheDocument();
+    expect(screen.queryByText(/cosine/i)).not.toBeInTheDocument();
   });
 
   it("renders the chunk text", () => {
@@ -43,8 +43,14 @@ describe("AnswerCard", () => {
 
   it("renders grounding status and latency", () => {
     render(<AnswerCard result={result} />);
-    expect(screen.getByText("Grounded")).toBeInTheDocument();
+    expect(screen.getByText("Answer")).toBeInTheDocument();
     expect(screen.getByText("1ms")).toBeInTheDocument();
+  });
+
+  it("labels unsupported answers as insufficient context", () => {
+    render(<AnswerCard result={{ ...result, grounded: false, answer: "Not enough evidence." }} />);
+    expect(screen.getByText("Insufficient Context")).toBeInTheDocument();
+    expect(screen.queryByText("Not grounded")).not.toBeInTheDocument();
   });
 
   it("renders nothing without a result", () => {

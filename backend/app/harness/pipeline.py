@@ -71,6 +71,16 @@ class Pipeline:
         self, query: str, transcript: dict | None, top_k: int | None, language_code: str
     ) -> PipelineResult:
         result = PipelineResult(query=query)
+        result.engine.update({
+            "stt": self.settings.STT_ROUTER,
+            "llm": (
+                f"{self.settings.LLM_ROUTER}/{self.settings.LLM_MODEL}"
+                if self.settings.LLM_ROUTER.lower() != "dev"
+                else "test-extractive"
+            ),
+            "vector_db": "FAISS",
+            "embedding": self.retrieval.embedder.model_name(),
+        })
         threshold_total = time.perf_counter()
 
         transcript = transcript or {"transcript": query, "latency_ms": 0.0, "engine": self.settings.STT_ROUTER}

@@ -1,4 +1,4 @@
-import { apiGet, apiPost } from "./api";
+import { apiGet, apiPost, apiPostBlob } from "./api";
 import { DEMO_RESULT, DEMO_BENCHMARK, DEMO_HEALTH } from "../utils/constants";
 
 const demoQuery = import.meta.env.VITE_DEMO_QUERY || "What is the best time to visit Palolem in Goa?";
@@ -32,16 +32,7 @@ export class RagService {
     }
 
     try {
-      if (onStage) {
-        onStage("stt");
-        await sleep(60);
-        onStage("retrieval");
-        await sleep(60);
-        onStage("rerank");
-        await sleep(60);
-        onStage("generation");
-        await sleep(60);
-      }
+      if (onStage) onStage("retrieval");
       const payload = { query, language_code: languageCode };
       if (topK) payload.top_k = topK;
       const data = await apiPost("/query", payload);
@@ -95,6 +86,11 @@ export class RagService {
     const params = new URLSearchParams({ language_code: languageCode });
     if (topK) params.set("top_k", String(topK));
     return apiPost(`/rag/voice?${params}`, form, 60000);
+  }
+
+  async synthesize(text, { languageCode = "en-IN" } = {}) {
+    if (this.demo) throw new Error("Text-to-speech is unavailable in demo mode.");
+    return apiPostBlob("/tts", { text, language_code: languageCode }, 45000);
   }
 
   get defaultQuery() {

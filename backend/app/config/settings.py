@@ -34,6 +34,9 @@ class Settings(BaseSettings):
     SARVAM_STT_MODEL: str = "saaras:v3"
     SARVAM_LANGUAGE_CODE: str = "unknown"
     SARVAM_LLM_URL: str = "https://api.sarvam.ai/v1"
+    SARVAM_TTS_URL: str = "https://api.sarvam.ai/text-to-speech"
+    SARVAM_TTS_MODEL: str = "bulbul:v3"
+    SARVAM_TTS_SPEAKER: str = "shubh"
     EXTERNAL_TIMEOUT_SECONDS: float = 20.0
     EXTERNAL_MAX_RETRIES: int = 2
     VECTOR_DB_URL: str = "http://localhost:19530"

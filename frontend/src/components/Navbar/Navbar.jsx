@@ -1,15 +1,8 @@
-import { useRAG } from "../../context/RAGContext";
-
 const LINKS = [
-  { href: "#how-it-works", label: "How it works" },
-  { href: "#pipeline", label: "Pipeline" },
-  { href: "#performance", label: "Performance" },
-  { href: "#team", label: "Team" },
+  { href: "#query", label: "Ask" },
 ];
 
 export default function Navbar() {
-  const { isOnline } = useRAG();
-
   const tryVoice = () => {
     window.dispatchEvent(new CustomEvent("rag:voice"));
     document.getElementById("query")?.scrollIntoView({ behavior: "smooth" });
@@ -29,10 +22,6 @@ export default function Navbar() {
             {link.label}
           </a>
         ))}
-        <div className="font-meta-mono text-meta-mono uppercase text-primary border border-primary px-3 py-1 rounded-full flex items-center gap-2">
-          <span aria-hidden="true" className={`w-2 h-2 rounded-full animate-pulse ${isOnline ? "bg-accent-yellow" : "bg-error"}`} />
-          {isOnline ? "SYSTEM ONLINE" : "SYSTEM DEGRADED"}
-        </div>
         <button
           type="button"
           onClick={tryVoice}

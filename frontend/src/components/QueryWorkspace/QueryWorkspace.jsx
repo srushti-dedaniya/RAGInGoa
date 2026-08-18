@@ -3,7 +3,6 @@ import { useVoiceRecorder } from "../../hooks/useVoiceRecorder";
 import { usePipeline } from "../../hooks/usePipeline";
 import VoiceButton from "../VoiceButton/VoiceButton";
 import Transcript from "../Transcript/Transcript";
-import Pipeline from "../Pipeline/Pipeline";
 import AnswerCard from "../AnswerCard/AnswerCard";
 import SourceCard from "../SourceCard/SourceCard";
 import { ragService } from "../../services/ragService";
@@ -126,7 +125,6 @@ export default function QueryWorkspace() {
               key={language.code}
               type="button"
               onClick={() => setLanguageCode(language.code)}
-              disabled={isRecording || isProcessing}
               aria-pressed={languageCode === language.code}
               className={`chip border transition-colors disabled:opacity-50 ${
                 languageCode === language.code
@@ -157,10 +155,6 @@ export default function QueryWorkspace() {
           </p>
         )}
 
-        <div className="mt-10">
-          <Pipeline activeStage={activeStage} isProcessing={isProcessing} />
-        </div>
-
         {(pipelineError || recorderError) && (
           <div
             role="alert"
@@ -171,7 +165,7 @@ export default function QueryWorkspace() {
         )}
 
         <div className="mt-8 space-y-6">
-          <AnswerCard result={result} isProcessing={isProcessing} />
+          <AnswerCard result={result} isProcessing={isProcessing} languageCode={languageCode} />
 
           {sources.length > 0 && (
             <section>
@@ -179,9 +173,6 @@ export default function QueryWorkspace() {
                 <h3 className="font-headline-lg text-headline-lg-mobile uppercase text-primary">
                   Sources ({sources.length})
                 </h3>
-                <span className="font-meta-mono text-meta-mono uppercase text-secondary">
-                  retrieved via {result?.engine?.vector_db || "vector search"}
-                </span>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {sources.map((source, i) => (
