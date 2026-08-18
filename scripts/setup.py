@@ -30,7 +30,14 @@ def ensure_dirs() -> None:
 
 
 def bootstrap_env() -> None:
-    targets = [ROOT / "backend" / ".env"]
+    # Keep each runtime self-contained: repository commands read the root file,
+    # FastAPI can be launched from ``backend/``, and Vite only exposes values
+    # from its own project directory. Never replace an existing local config.
+    targets = [
+        ROOT / ".env",
+        ROOT / "backend" / ".env",
+        ROOT / "frontend" / ".env",
+    ]
     for target in targets:
         example = target.parent / f"{target.name}.example"
         if not target.exists() and example.exists():

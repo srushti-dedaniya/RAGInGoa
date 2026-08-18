@@ -18,13 +18,13 @@ from backend.app.config.settings import get_settings  # reuse backend settings
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Build the RAGInGoa vector index.")
-    parser.add_argument("--data", default=None, help="corpus path (default: sample corpus)")
+    parser.add_argument("--data", default=None, help="normalized corpus path (default: MSMARCO-XI)")
     parser.add_argument("--strategy", default=None, help="chunking strategy")
     parser.add_argument("--out", default=None, help="index output dir")
     args = parser.parse_args(argv)
 
     settings = get_settings()
-    data_path = args.data or str(settings.sample_data_path)
+    data_path = args.data or str(settings.dataset_path)
     strategy = args.strategy or settings.CHUNK_STRATEGY
     out_dir = args.out or str(settings.index_path)
 
@@ -37,7 +37,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"chunks ({strategy}): {len(chunks)}  stats={manager.stats(chunks)}")
     print(f"fingerprint: {chunk_fingerprint(chunks)}")
 
-    embedder = get_embedder(model_name=settings.EMBEDDING_MODEL, dim=settings.EMBEDDING_DIM)
+    embedder = get_embedder(model_name=settings.EMBEDDING_MODEL, dim=settings.EMBEDDING_DIM, allow_fallback=False)
     index = build_index(embedder, chunks, out_dir)
     print(f"index written: {out_dir}  ({index.size()} vectors, model={embedder.model_name()})")
     return 0

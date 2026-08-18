@@ -24,7 +24,7 @@ def search_index(
 
     if index.size() == 0:
         return []
-    q = np.asarray(query_vector, dtype=np.float64)
+    q = np.asarray(query_vector, dtype=np.float32)
     if q.ndim == 2:
         q = q[0]
     q_norm = np.linalg.norm(q)

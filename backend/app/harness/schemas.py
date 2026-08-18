@@ -20,7 +20,7 @@ class PipelineResult:
     query: str
     answer: str = ""
     sources: list[dict] = field(default_factory=list)
-    confidence: float = 0.0
+    grounded: bool = False
     guardrails: list[dict] = field(default_factory=list)
     latency_breakdown: dict[str, float] = field(default_factory=dict)
     engine: dict[str, str] = field(default_factory=dict)

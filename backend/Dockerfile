@@ -13,9 +13,10 @@ WORKDIR /app
 
 # Core RAG package (sibling of backend/)
 COPY rag/ /rag/
+COPY rag/requirements.txt /app/rag-requirements.txt
 
 COPY backend/requirements.txt /app/requirements.txt
-RUN pip install --no-cache-dir -r /app/requirements.txt
+RUN pip install --no-cache-dir -r /app/rag-requirements.txt -r /app/requirements.txt
 
 COPY backend/app /app/app
 

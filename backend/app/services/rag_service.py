@@ -22,16 +22,25 @@ class RAGService:
         self.pipeline = pipeline
         self._started = time.monotonic()
 
-    def query(self, text: str, top_k: int | None = None) -> dict:
-        result = self.pipeline.run_text(text, top_k=top_k)
+    def query(self, text: str, top_k: int | None = None, language_code: str = "en-IN") -> dict:
+        result = self.pipeline.run_text(text, top_k=top_k, language_code=language_code)
         return self.pipeline.to_response_dict(result)
 
-    def audio_query(self, audio_bytes: bytes, filename: str, top_k: int | None = None) -> dict:
-        result = self.pipeline.run_audio(audio_bytes, filename, top_k=top_k)
+    def audio_query(
+        self, audio_bytes: bytes, filename: str, top_k: int | None = None,
+        language_code: str | None = None, content_type: str | None = None,
+    ) -> dict:
+        result = self.pipeline.run_audio(
+            audio_bytes, filename, top_k=top_k,
+            language_code=language_code, content_type=content_type,
+        )
         return self.pipeline.to_response_dict(result)
 
-    def transcribe(self, audio_bytes: bytes, filename: str) -> dict:
-        return self.pipeline.stt.transcribe(audio_bytes, filename)
+    def transcribe(
+        self, audio_bytes: bytes, filename: str,
+        language_code: str | None = None, content_type: str | None = None,
+    ) -> dict:
+        return self.pipeline.stt.transcribe(audio_bytes, filename, language_code, content_type)
 
     def benchmark(self, queries: list[str] | None, top_k: int | None) -> dict:
         from rag.benchmarking.benchmark import run_benchmark
@@ -43,7 +52,12 @@ class RAGService:
         return report
 
     def health(self) -> dict:
-        ready = self.pipeline.retrieval.is_ready()
+        error = None
+        try:
+            ready = self.pipeline.retrieval.is_ready()
+        except Exception as exc:  # readiness must remain observable when index is absent
+            ready = False
+            error = str(exc)
         status = SYSTEM_STATUS_OK if ready else SYSTEM_STATUS_DEGRADED
         return {
             "service": SERVICE_NAME,
@@ -55,8 +69,9 @@ class RAGService:
                 "llm": self.settings.LLM_ROUTER,
                 "vector_db": self.settings.VECTOR_DB_ROUTER,
             },
-            "index_size": self.pipeline.retrieval.index_size(),
+            "index_size": self.pipeline.retrieval.index_size() if ready else 0,
             "ready": ready,
+            **({"detail": error} if error else {}),
         }
 
 

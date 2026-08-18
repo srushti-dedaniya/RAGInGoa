@@ -9,6 +9,15 @@ DEFAULT_THRESHOLD = 0.02
 
 def relevance_check(query: str, context: list[dict], embedder=None, threshold: float = DEFAULT_THRESHOLD) -> Result:
     """Scores retrieval relevance as mean embedding cosine between query and hits."""
+    retrieval_scores = [float(c["score"]) for c in context if c.get("score") is not None]
+    if retrieval_scores:
+        best_score = max(retrieval_scores)
+        return Result(
+            name="relevance",
+            passed=best_score >= threshold,
+            reason=f"best FAISS similarity {best_score:.3f}",
+            score=round(best_score, 4),
+        )
     if embedder is None or not context:
         if not context:
             return Result(

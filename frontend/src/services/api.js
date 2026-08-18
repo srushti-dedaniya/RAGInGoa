@@ -24,13 +24,21 @@ export async function apiRequest(path, { method = "GET", body = null, timeoutMs 
       let detail = `HTTP ${response.status}`;
       try {
         const payload = await response.json();
-        detail = payload.detail || payload.message || detail;
+        detail = payload.detail || payload.message || payload.error?.message || detail;
       } catch {
         /* keep default */
       }
       throw new Error(detail);
     }
     return await response.json();
+  } catch (error) {
+    if (error?.name === "AbortError") {
+      throw new Error("The request timed out. Check that the backend is running and try again.");
+    }
+    if (error instanceof TypeError) {
+      throw new Error(`Cannot reach the RAG backend at ${BASE_URL}. Start the backend and verify CORS settings.`);
+    }
+    throw error;
   } finally {
     clearTimeout(timer);
   }

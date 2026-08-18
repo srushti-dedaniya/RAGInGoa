@@ -36,7 +36,7 @@ def handle(error: BaseException) -> dict[str, Any]:
         "message": message,
         "status_code": status,
         "stage": getattr(error, "stage", None),
-        "detail": str(error),
+        "detail": message,
     }
 
 

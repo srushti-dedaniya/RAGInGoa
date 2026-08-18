@@ -10,6 +10,7 @@ from __future__ import annotations
 import hashlib
 import logging
 import math
+from functools import lru_cache
 
 logger = logging.getLogger(__name__)
 
@@ -84,24 +85,31 @@ class SentenceTransformerEmbedder(Embedder):
         super().__init__(dim=dim)
         from sentence_transformers import SentenceTransformer  # optional dep
 
-        self._model = SentenceTransformer(model_name)
+        # The index build/setup step downloads the model. Runtime must use that
+        # cached copy instead of issuing slow Hugging Face metadata requests.
+        self._model = SentenceTransformer(model_name, local_files_only=True)
         self._name = model_name
 
+    @lru_cache(maxsize=512)
     def embed(self, text: str) -> list[float]:
-        return self._model.encode(text).tolist()
+        return self._model.encode(text, normalize_embeddings=True).tolist()
 
     def embed_batch(self, texts: list[str]) -> list[list[float]]:
-        return self._model.encode(texts).tolist()
+        return self._model.encode(texts, normalize_embeddings=True, batch_size=64, show_progress_bar=False).tolist()
 
     def model_name(self) -> str:
         return self._name
 
 
-def get_embedder(model_name: str = "all-MiniLM-L6-v2", dim: int = 384) -> Embedder:
+def get_embedder(model_name: str = "all-MiniLM-L6-v2", dim: int = 384, allow_fallback: bool = True) -> Embedder:
     """Return SentenceTransformerEmbedder when available, else HashingEmbedder."""
+    if model_name.lower() in {"dev", "hashing", "test"}:
+        return HashingEmbedder(dim=dim)
     try:
         return SentenceTransformerEmbedder(model_name=model_name, dim=dim)
     except ImportError:  # pragma: no cover - runs only when lib missing
+        if not allow_fallback:
+            raise RuntimeError("sentence-transformers is required for production indexing")
         logger.warning(
             "sentence-transformers not installed; using dev HashingEmbedder(dim=%d)", dim
         )

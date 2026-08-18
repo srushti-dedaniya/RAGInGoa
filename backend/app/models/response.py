@@ -43,10 +43,12 @@ class EngineInfo(BaseModel):
 
 
 class QueryResponse(BaseModel):
+    success: bool = True
     query: str
     answer: str
     sources: list[Source] = Field(default_factory=list)
-    confidence: float = 0.0
+    grounded: bool = False
+    latency_ms: float = 0.0
     guardrails: GuardrailSummary | None = None
     latency_breakdown: LatencyBreakdown = Field(default_factory=LatencyBreakdown)
     engine: EngineInfo = Field(default_factory=EngineInfo)
@@ -55,10 +57,12 @@ class QueryResponse(BaseModel):
 
 
 class TranscriptResponse(BaseModel):
+    success: bool = True
     transcript: str
-    confidence: float = 1.0
+    language: str | None = None
     engine: str = "dev"
     latency_ms: float = 0.0
+    processing_time_ms: float = 0.0
 
 
 class HealthResponse(BaseModel):
@@ -69,6 +73,7 @@ class HealthResponse(BaseModel):
     routers: dict[str, str] = Field(default_factory=dict)
     index_size: int = 0
     ready: bool = True
+    detail: str | None = None
 
 
 class BenchmarkResult(BaseModel):

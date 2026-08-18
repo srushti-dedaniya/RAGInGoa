@@ -18,7 +18,7 @@ def test_transcribe_dev_router(client):
     assert response.status_code == 200
     body = response.json()
     assert body["transcript"]
-    assert body["engine"] == "dev-stt"
+    assert body["engine"] == "test-stt"
     assert body["latency_ms"] >= 0
 
 
@@ -36,3 +36,21 @@ def test_transcribe_rejects_unknown_type(client):
         files={"file": ("notes.txt", b"hello", "text/plain")},
     )
     assert response.status_code == 415
+
+
+@pytest.mark.parametrize("language_code", ["en-IN", "hi-IN", "mr-IN"])
+def test_voice_accepts_browser_webm_codec_and_language(client, language_code):
+    response = client.post(
+        f"/api/rag/voice?language_code={language_code}",
+        files={"file": ("recording.webm", b"\x00" * 512, "audio/webm;codecs=opus")},
+    )
+    assert response.status_code == 200
+    assert response.json()["query"]
+
+
+def test_voice_rejects_unsupported_language(client):
+    response = client.post(
+        "/api/rag/voice?language_code=fr-FR",
+        files={"file": ("recording.webm", b"\x00" * 512, "audio/webm")},
+    )
+    assert response.status_code == 400

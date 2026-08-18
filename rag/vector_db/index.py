@@ -28,6 +28,10 @@ def _vec_file(path: Path, slug: str) -> Path:
     return path / f"{slug}.npy"
 
 
+def _faiss_file(path: Path, slug: str) -> Path:
+    return path / f"{slug}.faiss"
+
+
 @dataclass
 class SearchResult:
     """A single hit returned by the index."""
@@ -53,10 +57,22 @@ class VectorIndex:
     ) -> None:
         self.metric = metric
         self.model_name = model_name
-        self.vectors = vectors if vectors is not None else np.zeros((0, 0), dtype=np.float64)
+        self.vectors = vectors if vectors is not None else np.zeros((0, 0), dtype=np.float32)
         self.ids: list[str] = ids or []
         self.texts: list[str] = texts or []
         self.meta: list[dict] = meta or []
+        self._faiss = None
+        self._build_faiss()
+
+    def _build_faiss(self) -> None:
+        if self.vectors.ndim != 2 or not self.vectors.size:
+            return
+        try:
+            import faiss
+            self._faiss = faiss.IndexFlatIP(self.vectors.shape[1])
+            self._faiss.add(np.ascontiguousarray(self.vectors, dtype=np.float32))
+        except ImportError:
+            self._faiss = None
 
     def add(
         self,
@@ -65,7 +81,7 @@ class VectorIndex:
         metadata: list[dict],
         texts: list[str] | None = None,
     ) -> None:
-        mat = np.asarray(vectors, dtype=np.float64)
+        mat = np.asarray(vectors, dtype=np.float32)
         if mat.ndim == 1:
             mat = mat.reshape(1, -1)
         if self.vectors.shape[1] == 0:
@@ -75,8 +91,14 @@ class VectorIndex:
         self.ids.extend(ids)
         self.meta.extend(metadata)
         self.texts.extend(texts or ["" for _ in ids])
+        self._build_faiss()
 
     def search(self, vector: list[float], top_k: int = 4) -> list[SearchResult]:
+        if self._faiss is not None and self.size():
+            query = np.ascontiguousarray(np.asarray(vector, dtype=np.float32).reshape(1, -1))
+            scores, positions = self._faiss.search(query, min(top_k, self.size()))
+            return [SearchResult(self.ids[int(i)], self.texts[int(i)], self.meta[int(i)], float(score), self.metric)
+                    for score, i in zip(scores[0], positions[0]) if i >= 0]
         return search_index(self, vector, top_k)
 
     def size(self) -> int:
@@ -87,6 +109,9 @@ class VectorIndex:
         p.mkdir(parents=True, exist_ok=True)
         slug = _slug(self.model_name)
         np.save(_vec_file(p, slug), self.vectors)
+        if self._faiss is not None:
+            import faiss
+            faiss.write_index(self._faiss, str(_faiss_file(p, slug)))
         payload = {
             "model_name": self.model_name,
             "metric": self.metric,
@@ -134,13 +159,28 @@ def build_index(
 ) -> VectorIndex:
     """Embed chunks and persist a fresh index to ``path``."""
     if not chunks:
-        vectors = np.zeros((0, embedder.dim), dtype=np.float64)
+        vectors = np.zeros((0, embedder.dim), dtype=np.float32)
         index = VectorIndex(model_name=embedder.model_name(), vectors=vectors)
         index.save(path)
         return index
 
     texts = [c.text for c in chunks]
-    vectors = embedder.embed_batch(texts)
+    # MSMARCO-XI supplies aligned Hindi and English query/passage metadata.
+    # Index both representations so the configured MiniLM model can retrieve
+    # English queries while retaining the original Hindi passage as evidence.
+    embedding_texts = []
+    for c in chunks:
+        meta = c.metadata
+        # Query fields are repeated deliberately: MiniLM truncates long inputs,
+        # and MSMARCO retrieval should prioritize the document's query intent
+        # over incidental terms deep in a passage.
+        fields = (
+            [meta.get("query")] * 8 + [meta.get("english_query")] * 8 +
+            [meta.get("answer"), meta.get("english_answer"), c.text,
+             meta.get("english_passage")]
+        )
+        embedding_texts.append("\n".join(str(value) for value in fields if value))
+    vectors = embedder.embed_batch(embedding_texts)
     ids = [c.chunk_id for c in chunks]
     meta = [dict(c.metadata) for c in chunks]
     index = VectorIndex(model_name=embedder.model_name())

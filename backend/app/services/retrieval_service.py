@@ -39,6 +39,10 @@ class RetrievalService:
     def _build(self) -> Retriever:
         index = load_index(self.settings.index_path, model_name=self.embedder.model_name())
         if index is None or index.size() == 0:
+            if self.settings.REQUIRE_INDEX:
+                raise RuntimeError(
+                    f"persistent index missing at {self.settings.index_path}; run scripts/build_index.py"
+                )
             index = self._build_from_samples()
         return Retriever(self.embedder, index, self.config)
 
@@ -67,7 +71,7 @@ class RetrievalService:
         latency_ms = round((time.perf_counter() - started) * 1000, 2)
         return {
             "query": query,
-            "engine": f"dev/{self.embedder.model_name()}",
+            "engine": "FAISS",
             "top_k": len(results),
             "latency_ms": latency_ms,
             "results": results,

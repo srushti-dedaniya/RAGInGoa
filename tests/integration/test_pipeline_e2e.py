@@ -25,7 +25,7 @@ def test_full_voice_turn(client):
 
     assert body["answer"]
     assert len(body["sources"]) >= 1
-    assert body["engine"]["stt"] in {"dev", "whisper"}
+    assert body["engine"]["stt"] in {"dev", "sarvam"}
     assert body["latency_breakdown"]["total"] > 0
     assert body["guardrails"]["passed"] is True
 

@@ -1,4 +1,4 @@
-import { formatConfidence, formatLatency } from "../../utils/formatLatency";
+import { formatLatency } from "../../utils/formatLatency";
 import { formatTime } from "../../utils/formatTime";
 import Icon from "../Icon/Icon";
 
@@ -16,7 +16,7 @@ export default function AnswerCard({ result, isProcessing = false }) {
           <h3 className="font-headline-lg text-headline-lg-mobile uppercase text-primary">Grounded Answer</h3>
         </div>
         <div className="flex items-center gap-2 font-meta-mono text-meta-mono uppercase">
-          <span className="chip bg-surface-variant">Confidence {formatConfidence(result.confidence)}</span>
+          <span className="chip bg-surface-variant">{result.grounded ? "Grounded" : "Not grounded"}</span>
           <span className="chip bg-surface-variant">{formatTime()}</span>
         </div>
       </div>

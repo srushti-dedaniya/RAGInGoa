@@ -1,258 +1,102 @@
 # RAGInGoa
 
-**HH Goa 2026 · Task #02 — Voice → RAG → Answer**
+HH Goa 2026 Task 2 — Voice-Enabled RAG. The existing React/Vite interface is backed by a FastAPI orchestration harness, Sarvam speech recognition, MSMARCO-XI retrieval, grounded generation, and deterministic guardrails.
 
-> Don't type. Just ask. — *Speak a question. We retrieve the signal. You get a grounded answer.*
+## Architecture
 
-RAGInGoa is a voice-driven **Retrieval-Augmented Generation** (RAG) system. You speak a
-question, it is transcribed, embedded, searched against a vector index of Goa context,
-reranked, and grounded before an answer is generated. Four guardrails (safety, relevance,
-grounding, refusal) verify every answer.
-
-```
-VOICE IN → STT → QUERY WORKSPACE → RETRIEVAL → RERANK → GENERATION → GUARDRAILS → GROUNDED ANSWER
+```text
+Voice / text → validation → Sarvam STT (voice) → normalization → safety check
+→ query embedding → persistent FAISS search → threshold/context selection
+→ grounded generation → grounding validation → structured API response → React UI
 ```
 
-![RAGInGoa pipeline](docs/architecture/pipeline-diagram.png)
+The index and embedding model load once per backend process. Document embeddings are produced only by the indexing command; requests embed only the normalized query. `/api/rag/voice` executes voice-to-answer in one backend request, so the Sarvam key never reaches the browser.
 
-**No API keys required.** Every provider has a *dev router* (offline, deterministic) so the
-whole system runs on a clean clone. Swap in real providers (Whisper, OpenAI, chromadb) when
-you're ready.
+## Dataset and indexing
 
----
+The production corpus is [ai4bharat/MSMARCO-XI](https://huggingface.co/datasets/ai4bharat/MSMARCO-XI). The loader uses its real `query`, `Answer`, `query_id`, `query_type`, `passages.is_selected`, `English_passages`, `Translated_passages`, `Eng_Query`, and `Eng_Answer` schema. It removes blank/very short and duplicate passages and preserves language, split, query, answer, selection, passage position, and source metadata.
 
-## 1. Prerequisites
-
-| Tool | Version | Check |
-| --- | --- | --- |
-| Python | 3.10+ | `python --version` |
-| Node.js | 18+ | `node --version` |
-| npm | 9+ | `npm --version` |
-| Docker (optional) | 24+ | `docker --version` |
-
----
-
-## 2. Quick Start (recommended path)
-
-From the project root, in **three terminals**:
-
-```bash
-# Terminal 1 — build the vector index + run the backend
-pip install -r rag/requirements.txt -r backend/requirements.txt -r requirements-dev.txt
-python scripts/setup.py --no-install        # creates dirs + backend/.env
-python scripts/build_index.py               # writes index (sample Goa corpus)
-uvicorn app.main:app --reload --port 8000 --app-dir backend   # see note below
+```powershell
+python scripts/download_dataset.py --language hi --split validation --limit 5000
+python scripts/build_index.py --strategy sentence
 ```
 
-```bash
-# Terminal 2 — frontend dev server
-cd frontend
-npm install
-npm run dev
-```
+`--limit 0` processes the complete split. A bounded default keeps a laptop/demo build practical and reproducible. The index command fails if the semantic embedding dependency is unavailable; it never silently creates a hashing index. Artifacts are persisted under `rag/vector_db/index/` as FAISS, NumPy portability, and JSON metadata files. Runtime fails clearly when the configured index is absent and `REQUIRE_INDEX=true`; it does not rebuild on a request.
 
-```bash
-# Terminal 3 (optional) — verify with the live API
-curl http://localhost:8000/api/health
-curl -X POST http://localhost:8000/api/query \
-  -H "Content-Type: application/json" \
-  -d '{"query":"When is the best time to visit Palolem?"}'
-```
+## Chunking
 
-> Windows (PowerShell): use `Copy-Item backend/.env.example backend/.env`, and the
-> correct server command is `uvicorn app.main:app --reload --port 8000 --app-dir backend`.
+`CHUNKING_STRATEGY=sentence` is the default because MSMARCO passages are prose and sentence boundaries preserve meaning at low indexing cost.
 
-Open **http://localhost:5173** → click **TRY VOICE** or the central mic blob → ask
-*"When is the best time to visit Palolem?"*.
+- `fixed`: character windows with configurable overlap.
+- `sentence`: sentence-boundary packing up to a target size, with overlap.
+- `semantic`: topic breaks from lexical coherence changes between adjacent sentences.
+- `metadata`: wraps another strategy and prefixes selected document metadata so retrieved slices remain self-describing.
+- `hierarchical`: creates parent windows and sentence-aware child chunks, retaining parent IDs and offsets.
 
----
+Every chunk contains `document_id`, `chunk_id`, `parent_id`, `source`, `position`, `chunking_strategy`, `text_length`, offsets, and dataset metadata.
 
-## 3. Step-by-Step (what each command does)
+## Retrieval, harness, and guardrails
 
-### 3.1 Bootstrap the workspace
+`all-MiniLM-L6-v2` (384 dimensions, normalized vectors) is the configurable low-latency default. FAISS `IndexFlatIP` performs cosine-equivalent search over normalized embeddings. `TOP_K` and `SIMILARITY_THRESHOLD` bound the context. The harness records stage latency, retries bounded external failures, and formats one response contract.
 
-```bash
-python scripts/setup.py
-```
+Safety and prompt-injection patterns exit before retrieval/generation. Results below the threshold exit without an LLM call. Retrieved documents are delimited as untrusted data and cannot override the system prompt. Generation requires JSON output and source citations. A deterministic post-check requires a retrieved source identifier; an unverified answer is replaced with an honest fallback. These controls reduce risk; they do not claim hallucinations are impossible.
 
-- Creates empty data / index / benchmark directories.
-- Copies `backend/.env.example` → `backend/.env` if missing.
-- Optionally installs dependencies (`--scope rag|backend|frontend|all`).
+## Setup
 
-### 3.2 Build the vector index
+Python 3.10+ and Node 18+ are required.
 
-```bash
+```powershell
+python -m pip install -r rag/requirements.txt -r backend/requirements.txt -r requirements-dev.txt
+Copy-Item .env.example .env
+python scripts/download_dataset.py --language hi --split validation --limit 5000
 python scripts/build_index.py
+python -m uvicorn app.main:app --app-dir backend --port 8000
 ```
 
-- Reads the sample corpus (`rag/data/samples/sample_goa_docs.jsonl`).
-- Chunks with the default `sentence` strategy, embeds with the dev hashing embedder.
-- Writes `rag/vector_db/index/hashing-384.npy` + `hashing-384_meta.json`.
+In a second terminal:
 
-The backend also auto-builds this index on first request if it's missing, so this step is
-optional but recommended (it makes startup instant).
-
-### 3.3 Run the backend
-
-```bash
-uvicorn app.main:app --reload --port 8000 --app-dir backend
-```
-
-From the project root. Interactive docs: **http://localhost:8000/docs**.
-
-| Endpoint | Result |
-| --- | --- |
-| `GET /api/health` | system status, routers, index size |
-| `POST /api/query` | `{query, top_k}` → grounded answer + sources + guardrails |
-| `POST /api/transcribe` | multipart audio → transcript |
-| `POST /api/benchmark` | run a latency benchmark |
-
-### 3.4 Run the frontend
-
-```bash
+```powershell
 cd frontend
 npm install
 npm run dev
 ```
 
-Open **http://localhost:5173**.
+Open `http://localhost:5173`. Docker deployment remains available with `docker compose up --build`; production notes are in `deployment/README.md`.
 
-- The UI polls `/api/health` every 30 s; the badge flips between **SYSTEM ONLINE** and
-  **SYSTEM DEGRADED**.
-- Without a backend it **auto-falls back to demo mode** (canned responses + banner).
-- For a fully offline demo: create `frontend/.env` with `VITE_USE_DEMO=true`.
+## Environment
 
-### 3.5 Try it
+Copy `.env.example` and set:
 
-- **Voice:** the central blob or navbar **TRY VOICE** → record → "Ask it". The pipeline
-  animates STT → RETRIEVAL → RERANK → GENERATION → GUARDRAILS as it runs.
-- **Text:** type in the query workspace and press **Ask**.
-- **Guardrails:** scroll to the Guardrails section — the four checks light up with reasons.
-- **Performance:** hit **Run benchmark** in the Performance section.
+- `SARVAM_API_KEY` (required for real voice), `SARVAM_STT_MODEL`, `SARVAM_LANGUAGE_CODE`
+- `LLM_API_KEY` and `LLM_MODEL` (required for real generation)
+- `EMBEDDING_MODEL`, `EMBEDDING_DIM`, `VECTOR_DB_PATH`
+- `DATASET_PATH`, `DATASET_LANGUAGE`, `DATASET_SPLIT`, `DATASET_MAX_RECORDS`
+- `CHUNKING_STRATEGY`, `CHUNK_SIZE`, `CHUNK_OVERLAP`
+- `TOP_K`, `SIMILARITY_THRESHOLD`, `REQUIRE_INDEX`, `CORS_ORIGINS`
 
----
+No credential is committed or returned to the frontend. `STT_ROUTER=dev`, `LLM_ROUTER=dev`, and `REQUIRE_INDEX=false` exist only for deterministic automated tests/local diagnostics and are not the production defaults.
 
-## 4. Docker (optional)
+## API
 
-```bash
-docker compose up --build
-```
+- `GET /health` and `GET /api/health`
+- `POST /api/rag/query` (preferred) and `POST /api/query` (frontend compatibility): `{"query":"...","top_k":4}`
+- `POST /api/rag/voice`: multipart field `file`, optional query parameter `top_k`
+- `POST /api/transcribe`: Sarvam transcript only (compatibility/diagnostics)
+- `POST /api/benchmark`: benchmark service
 
-- Backend: http://localhost:8000/docs
-- Frontend: http://localhost:5173
+Query responses contain `success`, `query`, `answer`, `sources`, `grounded`, `latency_ms`, stage timings, engine details, and guardrail results. Errors use HTTP status codes and do not expose secrets or tracebacks.
 
-Nothing to install locally. Dev routers are the default. Production flavor:
-`docker compose -f deployment/docker/docker-compose.prod.yml up` (see
-`deployment/README.md`).
+## Testing and latency
 
----
-
-## 5. Tests & checks
-
-```bash
-# Python: full suite (rag + backend + integration)
-pip install -r requirements-dev.txt
+```powershell
 python -m pytest
-
-# Frontend
 cd frontend
-npm run lint
 npm test
 npm run build
+cd ..
+python scripts/run_benchmark.py --queries 100 --repetitions 1
 ```
 
-Currently **38 Python + 14 frontend** tests pass. CI replicates all of this in
-`.github/workflows/`.
+The benchmark measures warm query preprocessing, embedding, persistent-index retrieval, context selection, generation, grounding, and total RAG latency. It records hardware/model/index size and P50, P70, P100, mean, min, max, and sample count in `rag/benchmarking/results/last_run.json`. Voice latency is deliberately separate because Sarvam and network latency are external. A local result is added only after an actual run; the project never claims full voice-to-answer is under 200 ms.
 
----
-
-## 6. Benchmarks & evaluation
-
-```bash
-python scripts/run_benchmark.py --queries 10 --repetitions 3   # latency p50/p95/p99
-python rag/evaluation/retrieval_eval.py                        # hit@k / recall@k / MRRT
-python rag/experiments/chunking_comparison.py                  # strategy comparison
-python rag/experiments/retrieval_comparison.py                 # top_k sweep
-```
-
-Baseline numbers live in `docs/performance/latency-results.md`.
-
----
-
-## 7. Production routers (opt-in)
-
-Set values in `backend/.env`, then restart the backend:
-
-| Variable | Value | Effect |
-| --- | --- | --- |
-| `STT_ROUTER=whisper` | + `OPENAI_API_KEY` | real speech-to-text (Whisper API) |
-| `LLM_ROUTER=openai` | + `OPENAI_API_KEY` | gpt-4o-mini grounded generation |
-| `VECTOR_DB_ROUTER=chromadb` | + add container | real ANN vector store |
-| `EMBEDDING_MODEL=all-MiniLM-L6-v2` | `pip install sentence-transformers` | real embeddings |
-
-The `dev` routers are always a valid fallback and need zero configuration.
-
----
-
-## 8. Environment variables
-
-Every component ships a `.env.example`. Key ones:
-
-| Env | Default | Meaning |
-| --- | --- | --- |
-| `STT_ROUTER` | `dev` | `dev` \| `whisper` |
-| `LLM_ROUTER` | `dev` | `dev` \| `openai` |
-| `VECTOR_DB_ROUTER` | `dev` | `dev` \| `chromadb` \| `milvus` \| `qdrant` |
-| `OPENAI_API_KEY` | *(empty)* | Whisper / OpenAI routers |
-| `CHUNK_STRATEGY` | `sentence` | `fixed` \| `sentence` \| `semantic` \| `metadata` |
-| `CHUNK_SIZE` / `CHUNK_OVERLAP` | `500` / `80` | chunk budget |
-| `TOP_K` | `4` | chunks passed to the generator |
-| `CORS_ORIGINS` | localhost:5173,3000 | allowed browser origins |
-| `VITE_API_BASE_URL` | `http://localhost:8000` | frontend → backend URL |
-| `VITE_USE_DEMO` | `false` | force offline demo responses |
-
----
-
-## 9. Troubleshooting
-
-| Problem | Fix |
-| --- | --- |
-| Port 8000 in use | `uvicorn ... --port 8001`, then set `VITE_API_BASE_URL=http://localhost:8001` |
-| Frontend shows "System Degraded" | start the backend, or set `VITE_USE_DEMO=true` for offline mode |
-| No microphone / mic blocked | allow the browser permission, refresh, or fall back to typed queries |
-| `sentence-transformers not installed` | expected in dev mode — the hashing embedder is the fallback |
-| `cp` not found (Windows) | `Copy-Item backend/.env.example backend/.env` (or run `scripts/setup.py`) |
-| Slow first startup | it's the one-time index build; subsequent starts are instant |
-| Tests failing on Windows paths | run from the repo root; `pytest.ini` sets `testpaths` for you |
-
----
-
-## 10. Repository layout
-
-```
-RAGInGoa/
-├── frontend/      React + Vite + Tailwind SPA (voice UI, answers, benchmarks)
-├── backend/       FastAPI service (transcribe, query, benchmark, health) + guardrails
-├── rag/           Python RAG core: dataset, chunking, embeddings, retrieval, eval, bench
-├── tests/         backend / rag / integration pytest suites + frontend vitest
-├── docs/          architecture, RAG strategy, performance, guardrails, API, demo
-├── scripts/       setup, download_dataset, build_index, run_benchmark, make_diagram
-├── deployment/    docker / nginx / gunicorn production configs
-└── .github/       frontend + backend + tests CI workflows
-```
-
-## 11. Docs
-
-- `docs/architecture/architecture.md` — system design & failure semantics
-- `docs/rag/chunking-strategies.md` · `embeddings.md` · `retrieval.md`
-- `docs/guardrails/guardrails.md`
-- `docs/api/api-documentation.md` — full API reference
-- `docs/demo/demo-script.md` — 5-minute live demo script
-
-## 12. Team
-
-**Less noise. More signal.** — System v1.0 · HH Goa 2026
-
-## License
-
-MIT — see `LICENSE`.
+For an end-to-end voice check, start both services, permit microphone access, record a clip under 30 seconds, and submit it. Browser → `/api/rag/voice` → Sarvam → retrieval → generation → grounded response is the tested contract. A live Sarvam/LLM call requires valid credentials and available provider credits.

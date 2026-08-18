@@ -20,7 +20,7 @@ def test_query_returns_grounded_answer(client):
     assert body["query"]
     assert body["answer"]
     assert body["sources"]
-    assert body["confidence"] > 0
+    assert body["grounded"] is True
     assert body["guardrails"]["passed"] is True
     assert body["latency_breakdown"]["total"] >= 0
 

@@ -1,4 +1,7 @@
 numpy>=1.24
+sentence-transformers>=3.0
+faiss-cpu>=1.8
+datasets>=3.0
 # --- Optional providers (install to unlock real engines) ---
 # sentence-transformers>=2.6   # real embeddings
 # chromadb>=0.4                 # chromadb vector store

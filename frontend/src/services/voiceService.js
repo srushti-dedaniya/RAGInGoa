@@ -1,9 +1,10 @@
 import { ragService } from "./ragService";
 
 const MIME_TYPES = [
-  "audio/webm",
   "audio/webm;codecs=opus",
+  "audio/webm",
   "audio/mp4",
+  "audio/ogg;codecs=opus",
   "audio/ogg",
 ];
 

@@ -8,9 +8,9 @@ services:
     env_file:
       - ./backend/.env.example
     environment:
-      VECTOR_DB_ROUTER: dev
-      STT_ROUTER: dev
-      LLM_ROUTER: dev
+      STT_ROUTER: sarvam
+      LLM_ROUTER: openai
+      REQUIRE_INDEX: "true"
     ports:
       - "8000:8000"
     volumes:

@@ -8,21 +8,29 @@ import AnswerCard from "../AnswerCard/AnswerCard";
 import SourceCard from "../SourceCard/SourceCard";
 import { ragService } from "../../services/ragService";
 
+const LANGUAGES = [
+  { code: "en-IN", label: "English" },
+  { code: "hi-IN", label: "हिन्दी" },
+  { code: "mr-IN", label: "मराठी" },
+];
+
 export default function QueryWorkspace() {
-  const { isRecording, isSupported, level, start, stop } = useVoiceRecorder();
-  const { result, isProcessing, activeStage, error: pipelineError, run, reset } = usePipeline();
+  const { isRecording, isSupported, level, start, stop, error: recorderError } = useVoiceRecorder();
+  const { result, isProcessing, activeStage, error: pipelineError, run, runVoice, reset } = usePipeline();
   const [query, setQuery] = useState(ragService.defaultQuery);
-  const [lastTranscript, setLastTranscript] = useState("");
+  const [lastMessage, setLastMessage] = useState("");
+  const [languageCode, setLanguageCode] = useState("en-IN");
   const inputRef = useRef(null);
 
   const handleTranscribed = useCallback(
     async (blob) => {
-      const transcription = await ragService.transcribeAudio(blob);
-      setLastTranscript(transcription.transcript);
-      setQuery(transcription.transcript);
-      await run(transcription.transcript);
+      const response = await runVoice(blob, { languageCode });
+      if (response) {
+        setLastMessage(response.query);
+        setQuery(response.query);
+      }
     },
-    [run]
+    [runVoice, languageCode]
   );
 
   const startVoice = useCallback(async () => {
@@ -34,7 +42,7 @@ export default function QueryWorkspace() {
       inputRef.current?.focus();
       return;
     }
-    setLastTranscript("");
+    setLastMessage("");
     await start();
   }, [isRecording, isSupported, start, stop]);
 
@@ -63,8 +71,8 @@ export default function QueryWorkspace() {
   const submit = async (event) => {
     event.preventDefault();
     if (!query.trim() || isProcessing) return;
-    setLastTranscript("");
-    await run(query.trim());
+    setLastMessage(query.trim());
+    await run(query.trim(), { languageCode });
   };
 
   const sources = result?.sources || [];
@@ -89,6 +97,7 @@ export default function QueryWorkspace() {
           <VoiceButton
             isRecording={isRecording}
             isSupported={isSupported}
+            isProcessing={isProcessing}
             onClick={startVoice}
             onStop={finishVoice}
             size="lg"
@@ -111,28 +120,53 @@ export default function QueryWorkspace() {
           </button>
         </form>
 
+        <div className="mt-4 flex flex-wrap justify-center gap-2" role="group" aria-label="Voice language">
+          {LANGUAGES.map((language) => (
+            <button
+              key={language.code}
+              type="button"
+              onClick={() => setLanguageCode(language.code)}
+              disabled={isRecording || isProcessing}
+              aria-pressed={languageCode === language.code}
+              className={`chip border transition-colors disabled:opacity-50 ${
+                languageCode === language.code
+                  ? "bg-primary text-on-primary border-primary"
+                  : "bg-surface text-primary border-primary"
+              }`}
+            >
+              {language.label}
+            </button>
+          ))}
+        </div>
+
         {isRecording && (
           <div className="mt-4 max-w-xl mx-auto">
             <Transcript isRecording isSupported={isSupported} level={level} />
           </div>
         )}
 
-        {lastTranscript && !isRecording && (
+        {lastMessage && !isRecording && (
           <div className="mt-4 max-w-xl mx-auto">
-            <Transcript text={lastTranscript} />
+            <Transcript text={lastMessage} />
           </div>
+        )}
+
+        {isProcessing && !isRecording && (
+          <p className="mt-3 text-center font-meta-mono text-meta-mono uppercase text-secondary" role="status">
+            {activeStage === "stt" ? "Processing speech with Sarvam…" : "Retrieving and grounding answer…"}
+          </p>
         )}
 
         <div className="mt-10">
           <Pipeline activeStage={activeStage} isProcessing={isProcessing} />
         </div>
 
-        {pipelineError && (
+        {(pipelineError || recorderError) && (
           <div
             role="alert"
             className="mt-6 border border-dotted border-error rounded-lg px-4 py-3 font-meta-mono text-meta-mono text-error"
           >
-            {pipelineError}
+            {pipelineError || recorderError}
           </div>
         )}
 

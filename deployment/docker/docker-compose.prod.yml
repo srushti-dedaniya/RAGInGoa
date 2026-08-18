@@ -9,11 +9,11 @@ services:
   backend:
     image: ragingoa-backend
     env_file:
-      - ../backend/.env
+      - ../../backend/.env
     environment:
-      VECTOR_DB_ROUTER: ${VECTOR_DB_ROUTER:-dev}
-      STT_ROUTER: ${STT_ROUTER:-dev}
-      LLM_ROUTER: ${LLM_ROUTER:-dev}
+      STT_ROUTER: ${STT_ROUTER:-sarvam}
+      LLM_ROUTER: ${LLM_ROUTER:-openai}
+      REQUIRE_INDEX: ${REQUIRE_INDEX:-true}
     ports:
       - "8000:8000"
     restart: unless-stopped

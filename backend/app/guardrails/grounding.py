@@ -15,6 +15,16 @@ def grounding_check(answer: str, context: list[dict]) -> Result:
             score=0.0,
         )
     answered = answer.lower()
+    insufficient_phrases = (
+        "provided sources do not", "sources do not contain", "insufficient context",
+        "not enough information", "available sources do not", "जानकारी उपलब्ध नहीं",
+        "पर्याप्त जानकारी नहीं", "माहिती उपलब्ध नाही", "पुरेशी माहिती नाही",
+    )
+    if any(phrase in answered for phrase in insufficient_phrases):
+        return Result(
+            name="grounding", passed=False,
+            reason="generator reported insufficient source evidence", score=0.0,
+        )
     cited: list[str] = []
     for c in context:
         meta = c.get("metadata", {})

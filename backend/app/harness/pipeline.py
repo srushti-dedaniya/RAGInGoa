@@ -9,6 +9,7 @@ from ..config.settings import Settings
 from .error_handler import PipelineError, guard_stage, handle
 from .retry import RetryPolicy
 from .schemas import PipelineResult, StageResult
+from ..guardrails.safety import safety_check
 
 
 class Pipeline:
@@ -25,8 +26,11 @@ class Pipeline:
     # --- stage steps (each guard_stage'd) ---
 
     @guard_stage("stt")
-    def _stt_step(self, audio_bytes: bytes, filename: str) -> dict:
-        return self.stt.transcribe(audio_bytes, filename)
+    def _stt_step(
+        self, audio_bytes: bytes, filename: str,
+        language_code: str | None = None, content_type: str | None = None,
+    ) -> dict:
+        return self.stt.transcribe(audio_bytes, filename, language_code, content_type)
 
     @guard_stage("retrieval")
     def _retrieval_step(self, query: str, top_k: int | None) -> tuple[dict, list[dict]]:
@@ -38,8 +42,10 @@ class Pipeline:
         return details, results
 
     @guard_stage("generation")
-    def _generation_step(self, query: str, context: list[dict]) -> dict:
-        return self.retry.run(lambda: self.generation.generate(query, context), stage="generation")
+    def _generation_step(self, query: str, context: list[dict], language_code: str) -> dict:
+        return self.retry.run(
+            lambda: self.generation.generate(query, context, language_code), stage="generation"
+        )
 
     @guard_stage("guardrails")
     def _guardrails_step(self, query: str, context: list[dict], answer: str) -> dict:
@@ -47,21 +53,37 @@ class Pipeline:
 
     # --- public flows ---
 
-    def run_text(self, query: str, top_k: int | None = None) -> PipelineResult:
-        return self._execute(query, transcript=None, top_k=top_k)
+    def run_text(self, query: str, top_k: int | None = None, language_code: str = "en-IN") -> PipelineResult:
+        return self._execute(query, transcript=None, top_k=top_k, language_code=language_code)
 
-    def run_audio(self, audio_bytes: bytes, filename: str = "", top_k: int | None = None) -> PipelineResult:
-        stt_result = self._stt_step(audio_bytes, filename)
+    def run_audio(
+        self, audio_bytes: bytes, filename: str = "", top_k: int | None = None,
+        language_code: str | None = None, content_type: str | None = None,
+    ) -> PipelineResult:
+        stt_result = self._stt_step(audio_bytes, filename, language_code, content_type)
         query = stt_result["transcript"]
-        return self._execute(query, transcript=stt_result, top_k=top_k)
+        return self._execute(
+            query, transcript=stt_result, top_k=top_k,
+            language_code=language_code or self.settings.SARVAM_LANGUAGE_CODE,
+        )
 
-    def _execute(self, query: str, transcript: dict | None, top_k: int | None) -> PipelineResult:
+    def _execute(
+        self, query: str, transcript: dict | None, top_k: int | None, language_code: str
+    ) -> PipelineResult:
         result = PipelineResult(query=query)
         threshold_total = time.perf_counter()
 
         transcript = transcript or {"transcript": query, "latency_ms": 0.0, "engine": self.settings.STT_ROUTER}
         result.engine["stt"] = transcript.get("engine", self.settings.STT_ROUTER)
         result.latency_breakdown["stt"] = transcript.get("latency_ms", 0.0)
+
+        safety = safety_check(query)
+        if not safety.passed:
+            result.answer = "I can’t help with that request."
+            result.guardrails = [safety.as_dict()]
+            result.latency_breakdown.update({"retrieval": 0.0, "generation": 0.0, "guardrails": 0.0,
+                                             "total": round((time.perf_counter()-threshold_total)*1000, 2)})
+            return result
 
         # retrieval
         r_start = time.perf_counter()
@@ -75,9 +97,17 @@ class Pipeline:
         result.intermediate["retrieval_top_k"] = len(sources)
         result.stages.append(StageResult(name="retrieval", ok=True, latency_ms=result.latency_breakdown["retrieval"]))
 
+        if not sources:
+            result.answer = self._insufficient_answer(language_code)
+            result.guardrails = [{"name": "relevance", "passed": False,
+                                  "reason": "no result met the similarity threshold", "score": 0.0}]
+            result.latency_breakdown.update({"generation": 0.0, "guardrails": 0.0,
+                                             "total": round((time.perf_counter()-threshold_total)*1000, 2)})
+            return result
+
         # generation
         g_start = time.perf_counter()
-        gen = self._generation_step(query, sources)
+        gen = self._generation_step(query, sources, language_code)
         result.latency_breakdown["generation"] = round((time.perf_counter() - g_start) * 1000, 2)
         result.engine["llm"] = gen.get("provider", self.settings.LLM_ROUTER)
         result.answer = gen["answer"]
@@ -90,24 +120,28 @@ class Pipeline:
         result.guardrails = gr.get("checks", [])
         result.stages.append(StageResult(name="guardrails", ok=gr.get("passed", True), latency_ms=result.latency_breakdown["guardrails"]))
 
-        result.confidence = self._confidence(gr)
+        result.grounded = gr.get("passed", False)
+        if not result.grounded:
+            result.answer = self._insufficient_answer(language_code)
         result.latency_breakdown["total"] = round((time.perf_counter() - threshold_total) * 1000, 2)
         return result
 
-    def _confidence(self, guardrail_summary: dict) -> float:
-        checks = guardrail_summary.get("checks", [])
-        if not checks:
-            return 0.5
-        return round(sum(c.get("score", 0) for c in checks) / len(checks), 4)
+    @staticmethod
+    def _insufficient_answer(language_code: str) -> str:
+        return {
+            "hi-IN": "उपलब्ध स्रोतों में इस प्रश्न का पर्याप्त उत्तर नहीं मिला।",
+            "mr-IN": "उपलब्ध स्रोतांमध्ये या प्रश्नाचे पुरेसे उत्तर मिळाले नाही.",
+        }.get(language_code, "The available sources do not contain enough information to answer this question.")
 
     def to_response_dict(self, result: PipelineResult) -> dict:
         guard = {"passed": all(s.ok for s in result.stages if s.name == "guardrails") or True, "checks": result.guardrails}
         guard_passed = all(c.get("passed") for c in guard["checks"])
         return {
-            "query": result.query,
+            "success": True, "query": result.query,
             "answer": result.answer,
             "sources": result.sources,
-            "confidence": result.confidence,
+            "grounded": result.grounded,
+            "latency_ms": result.latency_breakdown.get("total", 0.0),
             "guardrails": {"passed": guard_passed, "checks": result.guardrails},
             "latency_breakdown": result.latency_breakdown,
             "engine": result.engine,

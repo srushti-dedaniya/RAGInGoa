@@ -28,7 +28,7 @@ describe("SourceCard", () => {
 describe("AnswerCard", () => {
   const result = {
     answer: "Palolem is best in winter. [Source: Palolem Beach Guide]",
-    confidence: 0.82,
+    grounded: true,
     sources: [source],
     latency_breakdown: { retrieval: 1.0, generation: 0.1, guardrails: 1.5, total: 2.6 },
     engine: { stt: "dev", llm: "dev", vector_db: "dev", embedding: "hashing-384" },
@@ -41,9 +41,9 @@ describe("AnswerCard", () => {
     expect(screen.getByText(/Palolem is best in winter/)).toBeInTheDocument();
   });
 
-  it("renders confidence and latency", () => {
+  it("renders grounding status and latency", () => {
     render(<AnswerCard result={result} />);
-    expect(screen.getByText(/82%/)).toBeInTheDocument();
+    expect(screen.getByText("Grounded")).toBeInTheDocument();
     expect(screen.getByText("1ms")).toBeInTheDocument();
   });
 

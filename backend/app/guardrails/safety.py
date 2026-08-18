@@ -7,8 +7,10 @@ from .base import Result
 _BLOCKLIST = {
     "chain instructions",
     "ignore previous",
+    "ignore all previous",
     "disregard your",
     "reveal your system",
+    "system prompt",
     "forget your instructions",
     "act as if",
     "dansking",

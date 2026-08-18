@@ -50,3 +50,12 @@ def test_unknown_strategy_raises():
     except ValueError:
         return
     raise AssertionError("expected ValueError for unknown strategy")
+
+
+def test_hierarchical_preserves_parent_child_metadata():
+    docs = [{"content": "One sentence. " * 200, "metadata": {"id": "parent-doc", "source": "test"}}]
+    chunks = ChunkManager("hierarchical", {"size": 120, "parent_size": 400}).split(docs)
+    assert len(chunks) > 1
+    assert all(c.metadata["document_id"] == "parent-doc" for c in chunks)
+    assert all(c.metadata["parent_id"].startswith("parent-doc-p") for c in chunks)
+    assert all(c.metadata["chunking_strategy"] == "hierarchical" for c in chunks)

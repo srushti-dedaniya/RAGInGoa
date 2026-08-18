@@ -50,14 +50,23 @@ class Services:
         )
         self.rag = RAGService(settings, self.pipeline)
 
-    def query(self, text: str, top_k: int | None = None) -> dict:
-        return self.rag.query(text, top_k=top_k)
+    def query(self, text: str, top_k: int | None = None, language_code: str = "en-IN") -> dict:
+        return self.rag.query(text, top_k=top_k, language_code=language_code)
 
-    def audio_query(self, audio_bytes: bytes, filename: str, top_k: int | None = None) -> dict:
-        return self.rag.audio_query(audio_bytes, filename, top_k=top_k)
+    def audio_query(
+        self, audio_bytes: bytes, filename: str, top_k: int | None = None,
+        language_code: str | None = None, content_type: str | None = None,
+    ) -> dict:
+        return self.rag.audio_query(
+            audio_bytes, filename, top_k=top_k,
+            language_code=language_code, content_type=content_type,
+        )
 
-    def transcribe(self, audio_bytes: bytes, filename: str) -> dict:
-        return self.rag.transcribe(audio_bytes, filename)
+    def transcribe(
+        self, audio_bytes: bytes, filename: str,
+        language_code: str | None = None, content_type: str | None = None,
+    ) -> dict:
+        return self.rag.transcribe(audio_bytes, filename, language_code, content_type)
 
     def benchmark(self, queries: list[str] | None, top_k: int | None) -> dict:
         return self.rag.benchmark(queries, top_k)
@@ -71,6 +80,8 @@ async def lifespan(app: FastAPI):
     settings = get_settings()
     app.state.settings = settings
     app.state.services = Services(settings)
+    app.state.services.retrieval.is_ready()
+    app.state.services.embedder.embed("RAGInGoa startup warmup")
     app.state.benchmark_report = {}
     logger.info(
         "RAGInGoa online: stt=%s llm=%s vdb=%s embed=%s",
@@ -111,6 +122,11 @@ async def root() -> dict:
         "docs": "/docs",
         "health": "/api/health",
     }
+
+
+@app.get("/health", include_in_schema=False)
+async def root_health() -> dict:
+    return app.state.services.health()
 
 
 __all__ = ["app"]

@@ -11,7 +11,9 @@ ROUTERS = ("dev", "whisper", "openai", "chromadb", "milvus", "qdrant")
 PIPELINE_STAGES = ("stt", "retrieval", "generation", "guardrails")
 
 MAX_AUDIO_BYTES = 25 * 1024 * 1024  # 25 MB
-SUPPORTED_AUDIO_TYPES = {"audio/wav", "audio/webm", "audio/mp3", "audio/ogg", "audio/mpeg"}
+SUPPORTED_AUDIO_TYPES = {"audio/wav", "audio/x-wav", "audio/webm", "video/webm", "audio/mp3", "audio/ogg", "audio/opus", "audio/mpeg", "audio/mp4", "audio/aac", "audio/flac"}
+
+SUPPORTED_STT_LANGUAGES = {"en-IN", "hi-IN", "mr-IN"}
 
 DEV_TRANSCRIPT = "What is the best time to visit Palolem in Goa?"
 
@@ -39,6 +41,7 @@ __all__ = [
     "PIPELINE_STAGES",
     "MAX_AUDIO_BYTES",
     "SUPPORTED_AUDIO_TYPES",
+    "SUPPORTED_STT_LANGUAGES",
     "DEV_TRANSCRIPT",
     "GUARDRAIL_NAMES",
     "BENCHMARK_REPORT_PATH",

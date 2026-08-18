@@ -41,7 +41,7 @@ class ChunkSplitter:
 class ChunkManager:
     """Selects and runs a chunking strategy over a corpus.
 
-    ``strategy`` is one of ``fixed | sentence | semantic | metadata``. Config is
+    ``strategy`` is one of ``fixed | sentence | semantic | metadata | hierarchical``. Config is
     a dict passed as kwargs to the strategy (``size``, ``overlap``, ...).
     """
 
@@ -65,11 +65,13 @@ class ChunkManager:
         from rag.chunking.sentence_based import SentenceChunker
         from rag.chunking.semantic import SemanticChunker
         from rag.chunking.metadata_aware import MetadataAwareChunker
+        from rag.chunking.hierarchical import HierarchicalChunker
 
         table = {
             "fixed": FixedSizeChunker,
             "sentence": SentenceChunker,
             "semantic": SemanticChunker,
+            "hierarchical": HierarchicalChunker,
         }
         if strategy in ("metadata", "metadata-aware"):
             inner = table[self.config.get("inner", "sentence")](**self.config)
@@ -87,7 +89,17 @@ class ChunkManager:
                 continue
             meta = dict(doc.get("metadata") or {})
             doc_id = meta.get("id") or f"doc-{i:04d}"
-            chunks.extend(self.splitter.split_text(content, str(doc_id), meta))
+            doc_chunks = self.splitter.split_text(content, str(doc_id), meta)
+            for position, chunk in enumerate(doc_chunks):
+                chunk.metadata.update({
+                    "document_id": str(doc_id),
+                    "chunk_id": chunk.chunk_id, "position": position,
+                    "chunking_strategy": chunk.strategy or self.strategy_name,
+                    "text_length": len(chunk.text),
+                })
+                chunk.metadata.setdefault("parent_id", str(doc_id))
+                chunk.metadata.setdefault("parent_id", str(doc_id))
+            chunks.extend(doc_chunks)
         return chunks
 
     def stats(self, chunks: list[Chunk]) -> dict[str, Any]:
