@@ -31,11 +31,11 @@ export default function Benchmark() {
       <div className="max-w-5xl mx-auto">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-10">
           <div>
-            <span className="chip bg-accent-yellow text-on-surface">PERFORMANCE</span>
-            <h2 className="font-headline-lg text-headline-lg-mobile uppercase text-primary mt-4">
+            <span className="chip font-dm-sans bg-sand/60 text-sea-deep border-sea/30">PERFORMANCE</span>
+            <h2 className="font-display-serif italic font-semibold text-sea mt-4 text-4xl md:text-5xl leading-tight">
               Latency. Measured.
             </h2>
-            <p className="font-meta-mono text-meta-mono uppercase text-secondary mt-2">
+            <p className="font-dm-sans text-[12px] font-medium uppercase tracking-[0.08em] text-sea-deep/70 mt-2">
               DEV BENCHMARK · P50 / P95 / P99 · REPRODUCIBLE
             </p>
           </div>
@@ -43,18 +43,18 @@ export default function Benchmark() {
             type="button"
             onClick={run}
             disabled={running}
-            className="bg-tertiary text-on-tertiary font-label-caps text-label-caps uppercase px-6 py-3 border-2 border-primary offset-shadow disabled:opacity-40 disabled:cursor-wait"
+            className="bg-terracotta text-paper font-dm-sans text-[12.5px] font-medium uppercase tracking-[0.08em] px-6 py-3 border-2 border-sea-deep shadow-[3px_3px_0_0_#0A3E35] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[1px_1px_0_0_#0A3E35] transition-all disabled:opacity-40 disabled:cursor-wait"
           >
             {running ? "Running…" : "Run benchmark"}
           </button>
         </div>
 
         {error && (
-          <p className="mb-6 font-meta-mono text-meta-mono text-error">{error}</p>
+          <p className="mb-6 font-dm-sans text-[13px] text-error">{error}</p>
         )}
 
         {!report ? (
-          <div className="border border-dotted border-primary rounded-xl p-8 text-center font-meta-mono text-meta-mono uppercase text-secondary">
+          <div className="border border-dotted border-sea rounded-xl p-8 text-center font-dm-sans text-[12px] font-medium uppercase tracking-[0.08em] text-sea-deep/70">
             No benchmark data yet — hit “Run benchmark”.
           </div>
         ) : (
@@ -67,9 +67,9 @@ export default function Benchmark() {
               <StatChip label="total avg" value={formatLatency(report.total_avg_ms, 2)} highlight />
             </div>
 
-            <div className="overflow-x-auto border border-outline-variant rounded-lg">
-              <table className="w-full text-left font-meta-mono text-meta-mono">
-                <thead className="bg-primary text-on-primary uppercase">
+            <div className="overflow-x-auto border border-sea/20 rounded-lg">
+              <table className="w-full text-left font-dm-sans text-[13px]">
+                <thead className="bg-sea text-paper uppercase tracking-[0.08em]">
                   <tr>
                     <th className="px-4 py-3">Stage</th>
                     <th className="px-4 py-3 text-right">avg</th>
@@ -78,10 +78,10 @@ export default function Benchmark() {
                     <th className="px-4 py-3 text-right">p99</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-outline-variant">
+                <tbody className="divide-y divide-sea/20">
                   {Object.entries(stages).map(([stage, stats]) => (
-                    <tr key={stage} className="bg-surface-container-low">
-                      <td className="px-4 py-3 uppercase text-primary">{stage}</td>
+                    <tr key={stage} className="bg-paper">
+                      <td className="px-4 py-3 uppercase text-sea">{stage}</td>
                       <td className="px-4 py-3 text-right">{formatLatency(stats.avg_ms, 2)}</td>
                       <td className="px-4 py-3 text-right">{formatLatency(stats.p50_ms, 2)}</td>
                       <td className="px-4 py-3 text-right">{formatLatency(stats.p95_ms, 2)}</td>
@@ -101,8 +101,8 @@ export default function Benchmark() {
 function StatChip({ label, value, highlight = false }) {
   return (
     <span
-      className={`chip ${
-        highlight ? "bg-primary text-on-primary" : "bg-surface-variant text-on-surface"
+      className={`chip font-dm-sans ${
+        highlight ? "bg-sea text-paper border-sea" : "bg-paper text-sea-deep border-sea/30"
       }`}
     >
       {label}: <strong>{value ?? "—"}</strong>

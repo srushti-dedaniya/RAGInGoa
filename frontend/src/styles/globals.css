@@ -96,3 +96,20 @@
     @apply font-meta-mono text-meta-mono uppercase text-on-surface-variant hover:text-primary transition-colors;
   }
 }
+
+/* Editorial serif display — unlayered so it beats every Tailwind/global rule.
+   Guarantees "Ask Freely, / Get Clearly." renders in Cormorant Garamond. */
+.hero-heading {
+  font-family: "Cormorant Garamond", "Playfair Display", Georgia, serif;
+  font-weight: 600;
+  font-style: italic;
+  letter-spacing: 0.01em;
+  line-height: 1.08;
+}
+
+.brand-logo {
+  font-family: "Cormorant Garamond", "Playfair Display", Georgia, serif;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}

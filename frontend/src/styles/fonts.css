@@ -1,5 +1,32 @@
 /* Self-hosted fonts — fully offline, no Google Fonts dependency.
-   Sources: fontsource CDN (Outfit, Manrope, JetBrains Mono). */
+   Sources: fontsource CDN (Outfit, Manrope, JetBrains Mono), Google Fonts (Playfair Display, Raleway).
+   Cormorant Garamond and DM Sans are bundled locally via @fontsource in src/main.jsx. */
+
+/* Raleway — refined premium sans (latin variable font covers 400 + 500 + 600) */
+@font-face {
+  font-family: "Raleway";
+  src: url("../fonts/raleway-latin-400-normal.woff2") format("woff2");
+  font-weight: 400 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Playfair Display";
+  src: url("../fonts/playfair-display-latin-700-italic.woff2") format("woff2");
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Playfair Display";
+  src: url("../fonts/playfair-display-latin-700-normal.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 @font-face {
   font-family: "Outfit";
   src: url("../fonts/outfit-latin-400-normal.woff2") format("woff2");

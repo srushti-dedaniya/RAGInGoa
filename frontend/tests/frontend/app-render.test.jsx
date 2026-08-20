@@ -3,8 +3,8 @@ import { render } from "@testing-library/react";
 import App from "../../src/App";
 
 describe("App smoke render", () => {
-  it("renders the RAGInGoa shell without throwing", () => {
+  it("renders the QueryGoa shell without throwing", () => {
     const { container } = render(<App />);
-    expect(container.textContent).toMatch(/RAGInGoa|HH GOA 2026/);
+    expect(container.textContent).toMatch(/QueryGoa|Ask Freely|Get Clearly/);
   });
 });

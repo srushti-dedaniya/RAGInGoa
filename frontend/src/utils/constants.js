@@ -10,41 +10,6 @@ export const PIPELINE_STAGES = [
   { id: "guardrails", label: "GUARDRAILS", icon: "verified_user", description: "Safety + grounding" },
 ];
 
-export const CHUNKING_STRATEGIES = [
-  {
-    id: "fixed",
-    name: "Fixed Size",
-    tagline: "window + overlap",
-    icon: "square_foot",
-    description:
-      "Split into fixed-size windows with configurable overlap. Predictable boundaries, may tear sentences.",
-  },
-  {
-    id: "sentence",
-    name: "Sentence-Based",
-    tagline: "whole units",
-    icon: "format_list_numbered",
-    description:
-      "Pack whole sentences until a size budget. Linguistically whole chunks that retrieve and cite cleanly.",
-  },
-  {
-    id: "semantic",
-    name: "Semantic",
-    tagline: "coherence first",
-    icon: "auto_fix_high",
-    description:
-      "Break where lexical coherence drops — approximates embedding-based topic segmentation without a model.",
-  },
-  {
-    id: "metadata",
-    name: "Metadata-Aware",
-    tagline: "self-describing",
-    icon: "tag",
-    description:
-      "Prefixes titles/sources so every chunk is resolvable on its own. Headings are never split away.",
-  },
-];
-
 export const GUARDRAIL_NAMES = [
   { id: "safety", label: "Safety", icon: "shield" },
   { id: "relevance", label: "Relevance", icon: "target" },

@@ -13,9 +13,9 @@ export default function AnswerCard({ result, isProcessing = false }) {
       <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
         <div className="flex items-center gap-3">
           <Icon name="verified" size={22} className="text-primary" />
-          <h3 className="font-headline-lg text-headline-lg-mobile uppercase text-primary">Grounded Answer</h3>
+          <h3 className="font-display-serif italic font-semibold text-primary">Grounded Answer</h3>
         </div>
-        <div className="flex items-center gap-2 font-meta-mono text-meta-mono uppercase">
+        <div className="flex items-center gap-2 font-dm-sans text-[12px] font-medium uppercase tracking-[0.08em]">
           <span className="chip bg-surface-variant">Confidence {formatConfidence(result.confidence)}</span>
           <span className="chip bg-surface-variant">{formatTime()}</span>
         </div>
@@ -24,11 +24,11 @@ export default function AnswerCard({ result, isProcessing = false }) {
       {isProcessing ? (
         <div className="flex items-center gap-3 text-on-surface-variant">
           <Icon name="progress_activity" size={20} className="animate-spin text-primary" />
-          <span className="font-meta-mono text-meta-mono uppercase">generating grounded answer…</span>
+          <span className="font-dm-sans text-[12px] font-medium uppercase tracking-[0.08em]">generating grounded answer…</span>
         </div>
       ) : (
         <>
-          <p className="font-body-md text-body-md text-on-surface whitespace-pre-line leading-relaxed" aria-live="polite">
+          <p className="font-dm-sans text-[16px] leading-[1.7] text-on-surface whitespace-pre-line" aria-live="polite">
             {result.answer}
           </p>
 
@@ -40,7 +40,7 @@ export default function AnswerCard({ result, isProcessing = false }) {
           </div>
 
           <div className="mt-4 flex flex-wrap items-center gap-2">
-            <span className="font-label-caps text-label-caps uppercase text-secondary">Engine</span>
+            <span className="font-dm-sans text-[12px] font-medium uppercase tracking-[0.08em] text-secondary">Engine</span>
             <EngineChip label="STT" value={engine.stt} />
             <EngineChip label="LLM" value={engine.llm} />
             <EngineChip label="VectorDB" value={engine.vector_db} />
@@ -48,7 +48,7 @@ export default function AnswerCard({ result, isProcessing = false }) {
           </div>
 
           {result.warnings?.length > 0 && (
-            <div className="mt-4 border border-dotted border-error rounded-lg px-4 py-3 font-meta-mono text-meta-mono text-error">
+            <div className="mt-4 border border-dotted border-error rounded-lg px-4 py-3 font-dm-sans text-[13px] text-error">
               {result.warnings.map((w) => (
                 <p key={w}>⚠ {w}</p>
               ))}
@@ -67,18 +67,18 @@ function LatencyTile({ label, ms, icon, highlight = false }) {
         highlight ? "bg-primary text-on-primary border-primary" : "bg-surface border-outline-variant"
       }`}
     >
-      <div className="flex items-center gap-1.5 font-meta-mono text-meta-mono uppercase opacity-80">
+      <div className="flex items-center gap-1.5 font-dm-sans text-[12px] font-medium uppercase tracking-[0.08em] opacity-80">
         <Icon name={icon} size={14} />
         {label}
       </div>
-      <div className="font-body-bold text-body-bold">{formatLatency(ms)}</div>
+      <div className="font-dm-sans text-[16px] font-semibold">{formatLatency(ms)}</div>
     </div>
   );
 }
 
 function EngineChip({ label, value }) {
   return (
-    <span className="chip bg-surface text-on-surface-variant">
+    <span className="chip font-dm-sans bg-surface text-on-surface-variant">
       {label}: <span className="text-primary">{value || "—"}</span>
     </span>
   );

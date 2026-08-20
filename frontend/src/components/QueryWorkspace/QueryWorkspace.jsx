@@ -73,11 +73,11 @@ export default function QueryWorkspace() {
     <section id="query" className="px-margin-mobile md:px-margin-desktop py-16">
       <div className="max-w-5xl mx-auto">
         <div className="text-center mb-10">
-          <span className="chip bg-accent-yellow text-on-surface">INTERACTIVE CORE</span>
-          <h2 className="font-headline-lg text-headline-lg-mobile uppercase text-primary mt-4">
+          <span className="chip font-dm-sans bg-accent-yellow text-on-surface">INTERACTIVE CORE</span>
+          <h2 className="font-display-serif italic font-semibold text-primary mt-4 text-4xl md:text-5xl leading-tight">
             Query Workspace
           </h2>
-          <p className="font-meta-mono text-meta-mono uppercase text-secondary mt-2">
+          <p className="font-dm-sans text-[12px] font-medium uppercase tracking-[0.08em] text-secondary mt-2">
             VOICE IN → CONTEXT OUT → GROUNDED ANSWERS
           </p>
         </div>
@@ -99,13 +99,13 @@ export default function QueryWorkspace() {
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Ask anything about Goa — or hold the mic…"
-            className="flex-1 bg-transparent border-0 focus:ring-0 outline-none font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant"
+            className="flex-1 bg-transparent border-0 focus:ring-0 outline-none font-dm-sans text-[16px] text-on-surface placeholder:text-on-surface-variant"
             aria-label="Your question"
           />
           <button
             type="submit"
             disabled={isProcessing || !query.trim()}
-            className="bg-primary text-on-primary font-label-caps text-label-caps uppercase px-6 py-3 border-2 border-primary offset-shadow hover:bg-primary-container transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="bg-primary text-on-primary font-dm-sans text-[12.5px] font-medium uppercase tracking-[0.08em] px-6 py-3 border-2 border-primary offset-shadow hover:bg-primary-container transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {isProcessing ? "Thinking…" : "Ask"}
           </button>
@@ -123,14 +123,14 @@ export default function QueryWorkspace() {
           </div>
         )}
 
-        <div className="mt-10">
+        <div className="mt-4">
           <Pipeline activeStage={activeStage} isProcessing={isProcessing} />
         </div>
 
         {pipelineError && (
           <div
             role="alert"
-            className="mt-6 border border-dotted border-error rounded-lg px-4 py-3 font-meta-mono text-meta-mono text-error"
+            className="mt-6 border border-dotted border-error rounded-lg px-4 py-3 font-dm-sans text-[13px] text-error"
           >
             {pipelineError}
           </div>
@@ -142,10 +142,10 @@ export default function QueryWorkspace() {
           {sources.length > 0 && (
             <section>
               <div className="flex items-center justify-between mb-3">
-                <h3 className="font-headline-lg text-headline-lg-mobile uppercase text-primary">
+                <h3 className="font-display-serif italic font-semibold text-primary">
                   Sources ({sources.length})
                 </h3>
-                <span className="font-meta-mono text-meta-mono uppercase text-secondary">
+                <span className="font-dm-sans text-[12px] font-medium uppercase tracking-[0.08em] text-secondary">
                   retrieved via {result?.engine?.vector_db || "vector search"}
                 </span>
               </div>
@@ -162,7 +162,7 @@ export default function QueryWorkspace() {
               <button
                 type="button"
                 onClick={reset}
-                className="font-label-caps text-label-caps uppercase text-primary border border-primary px-4 py-2 rounded-full hover:bg-primary hover:text-on-primary transition-colors"
+                className="font-dm-sans text-[12.5px] font-medium uppercase tracking-[0.08em] text-primary border border-primary px-4 py-2 rounded-full hover:bg-primary hover:text-on-primary transition-colors"
               >
                 New question
               </button>
