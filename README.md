@@ -7,7 +7,6 @@ RAGInGoa is a voice-first RAG system built for **Hacker House Goa 2026 — Task 
 Users can ask questions through **voice or text** in **English, Hindi, or Marathi** and receive context-aware responses through an intelligent routing pipeline.
 
 ---
-
 ## Overview
 
 RAGInGoa is designed around a simple principle:
