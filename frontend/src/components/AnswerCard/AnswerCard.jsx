@@ -37,6 +37,7 @@ export default function AnswerCard({ result, isProcessing = false, languageCode 
   const breakdown = result.latency_breakdown || {};
   const visibleAnswer = cleanAnswer(result.answer);
   const isConversation = result.intermediate?.input_class === "conversational";
+  const isGeneral = result.intermediate?.input_class === "general";
 
   const listen = async () => {
     setAudioError("");
@@ -85,7 +86,7 @@ export default function AnswerCard({ result, isProcessing = false, languageCode 
         <div className="flex items-center gap-3">
           <Icon name={result.grounded ? "verified" : "info"} size={22} className="text-primary" />
           <h3 className="font-display-serif italic font-semibold text-primary">
-            {result.grounded || isConversation ? "Answer" : "Insufficient Context"}
+            {result.grounded || isConversation || isGeneral ? "Answer" : "Insufficient Context"}
           </h3>
         </div>
         <div className="flex items-center gap-2 font-dm-sans text-[12px] font-medium uppercase tracking-[0.08em]">

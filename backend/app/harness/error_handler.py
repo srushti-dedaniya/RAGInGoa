@@ -23,19 +23,29 @@ def handle(error: BaseException) -> dict[str, Any]:
     """Normalise any exception into an API-friendly error dict."""
     if isinstance(error, PipelineError):
         status = error.status_code
-        message = error.message
+        if error.stage == "stt":
+            # Keep provider/decode details in server logs, never in the API response.
+            status = 422
+            message = "Couldn't understand the recording. Please try again."
+            code = "speech_not_understood"
+        else:
+            message = error.message
+            code = "pipeline_error"
     elif isinstance(error, ValueError):  # bad input before processing
         status = 400
         message = str(error)
     else:
         status = 500
         message = "internal pipeline error"
-    logger.exception("pipeline error: %s", message)
+        code = "internal_error"
+    if not isinstance(error, PipelineError):
+        code = "invalid_request" if isinstance(error, ValueError) else code
+    logger.exception("pipeline error: %s", getattr(error, "message", str(error)))
     return {
         "error": True,
         "message": message,
         "status_code": status,
-        "stage": getattr(error, "stage", None),
+        "code": code,
         "detail": message,
     }
 

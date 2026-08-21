@@ -26,13 +26,18 @@ export async function apiRequest(path, { method = "GET", body = null, timeoutMs 
     });
     if (!response.ok) {
       let detail = `HTTP ${response.status}`;
+      let code = null;
       try {
         const payload = await response.json();
         detail = payload.detail || payload.message || payload.error?.message || detail;
+        code = payload.code || payload.error?.code || null;
       } catch {
         /* keep default */
       }
-      throw new Error(detail);
+      const requestError = new Error(detail);
+      requestError.status = response.status;
+      requestError.code = code;
+      throw requestError;
     }
     return responseType === "blob" ? await response.blob() : await response.json();
   } catch (error) {

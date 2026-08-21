@@ -23,13 +23,13 @@ export default function QueryWorkspace() {
 
   const handleTranscribed = useCallback(
     async (blob) => {
-      const response = await runVoice(blob, { languageCode });
+      const response = await runVoice(blob, { languageCode, fallbackQuery: query });
       if (response) {
         setLastMessage(response.query);
         setQuery(response.query);
       }
     },
-    [runVoice, languageCode]
+    [runVoice, languageCode, query]
   );
 
   const startVoice = useCallback(async () => {

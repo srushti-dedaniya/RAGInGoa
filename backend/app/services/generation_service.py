@@ -11,6 +11,11 @@ class GenerationError(RuntimeError):
 
 
 class GenerationService:
+    _INSUFFICIENT_PATTERNS = (
+        "insufficient", "not enough information", "does not contain", "do not contain",
+        "cannot determine", "can't determine", "अपर्याप्त", "पर्याप्त जानकारी नहीं",
+        "पर्याप्त उत्तर नहीं", "पुरेशी माहिती नाही", "पुरेसे उत्तर नाही",
+    )
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
         self.router = settings.LLM_ROUTER.lower()
@@ -57,30 +62,55 @@ class GenerationService:
             raise GenerationError(f"unsupported LLM_ROUTER '{self.router}'")
         if not isinstance(answer, str) or not answer.strip():
             raise GenerationError("generation returned an empty answer")
-        return {"answer": answer.strip(), "provider": provider, "model": self.settings.LLM_MODEL,
+        answer = answer.strip()
+        return {"answer": answer, "provider": provider, "model": self.settings.LLM_MODEL,
+                "insufficient": self.is_insufficient(answer),
                 "external_llm_ms": external_ms,
                 "latency_ms": round((time.perf_counter()-started)*1000, 2)}
 
+    @classmethod
+    def is_insufficient(cls, answer: str) -> bool:
+        normalized = " ".join(answer.lower().split())
+        return any(pattern in normalized for pattern in cls._INSUFFICIENT_PATTERNS)
+
     def generate_conversation(self, query: str, language_code: str = "en-IN") -> dict:
         """Generate a concise non-RAG turn using the configured production LLM."""
+        return self.generate_general(query, language_code, conversational=True)
+
+    def generate_general(
+        self, query: str, language_code: str = "en-IN", conversational: bool = False
+    ) -> dict:
+        """Answer a query that has no qualifying MSMARCO-XI evidence."""
+        if self.router == "dev":
+            answer = {
+                "hi-IN": "नमस्ते! यह केवल विकास परीक्षण प्रतिक्रिया है।",
+                "mr-IN": "नमस्कार! हा फक्त विकास चाचणी प्रतिसाद आहे.",
+            }.get(language_code, "Hello! This is a development-only test response.")
+            return {"answer": answer, "provider": "test-general", "model": "dev",
+                    "external_llm_ms": 0.0, "latency_ms": 0.0}
         if self.router not in {"openai", "sarvam"}:
-            raise GenerationError("conversational responses require a production LLM router")
+            raise GenerationError("general responses require a production LLM router")
         language = {"hi-IN": "Hindi", "mr-IN": "Marathi"}.get(language_code, "English")
         started = time.perf_counter()
+        purpose = (
+            "This is casual conversation, not a knowledge answer. Be warm and concise."
+            if conversational else
+            "Answer naturally from your general knowledge. Do not mention retrieval, datasets, or context. "
+            "If the answer depends on live or uncertain information, say that clearly instead of guessing."
+        )
         response = self._client.chat.completions.create(
             model=self.settings.LLM_MODEL, temperature=0.2, max_tokens=48,
             extra_body={"reasoning_effort": None},
             messages=[
                 {"role": "system", "content": (
-                    f"Reply naturally in {language}. This is casual conversation, not a knowledge answer. "
-                    "Be warm and concise; use at most two short sentences."
+                    f"Reply naturally in {language}. {purpose} Use at most two short sentences."
                 )},
                 {"role": "user", "content": query},
             ],
         )
         answer = response.choices[0].message.content
         if not answer:
-            raise GenerationError("conversational generation returned no content")
+            raise GenerationError("general generation returned no content")
         elapsed = round((time.perf_counter() - started) * 1000, 2)
         return {"answer": answer.strip(), "provider": f"{self.router}/{self.settings.LLM_MODEL}",
                 "model": self.settings.LLM_MODEL, "external_llm_ms": elapsed,

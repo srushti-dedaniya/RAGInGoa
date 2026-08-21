@@ -144,11 +144,21 @@ class Pipeline:
         result.stages.append(StageResult(name="retrieval", ok=True, latency_ms=result.latency_breakdown["retrieval"]))
 
         if not sources:
-            result.intermediate["input_class"] = "unsupported"
-            result.answer = self._insufficient_answer(language_code)
+            result.intermediate["input_class"] = "general"
             result.guardrails = [{"name": "relevance", "passed": False,
-                                  "reason": "no result met the similarity threshold", "score": 0.0}]
-            result.latency_breakdown.update({"generation": 0.0, "guardrails": 0.0,
+                                  "reason": "no result met the dataset threshold; routed to general LLM",
+                                  "score": 0.0}]
+            g_start = time.perf_counter()
+            gen = self.retry.run(
+                lambda: self.generation.generate_general(query, language_code),
+                stage="general_generation",
+            )
+            result.answer = gen["answer"]
+            result.engine["llm"] = gen.get("provider", self.settings.LLM_ROUTER)
+            result.latency_breakdown.update({
+                                             "generation": round((time.perf_counter()-g_start)*1000, 2),
+                                             "external_llm": gen.get("external_llm_ms", 0.0),
+                                             "guardrails": 0.0,
                                              "total": round((time.perf_counter()-threshold_total)*1000, 2)})
             return result
 
@@ -160,6 +170,37 @@ class Pipeline:
         result.latency_breakdown["external_llm"] = gen.get("external_llm_ms", 0.0)
         result.answer = gen["answer"]
         result.stages.append(StageResult(name="generation", ok=True, latency_ms=result.latency_breakdown["generation"]))
+
+        # A vector similarity hit is only a candidate dataset match. If strict
+        # grounded generation cannot answer from it, use the general path rather
+        # than presenting an insufficiency message as a grounded answer.
+        if gen.get("insufficient", False):
+            general_started = time.perf_counter()
+            general = self.retry.run(
+                lambda: self.generation.generate_general(query, language_code),
+                stage="general_generation",
+            )
+            result.intermediate["input_class"] = "general"
+            result.intermediate["rag_candidate_rejected"] = True
+            result.sources = []
+            result.answer = general["answer"]
+            result.engine["llm"] = general.get("provider", self.settings.LLM_ROUTER)
+            result.grounded = False
+            result.guardrails = [{"name": "relevance", "passed": False,
+                                  "reason": "retrieved evidence was not useful; routed to general LLM",
+                                  "score": 0.0}]
+            result.latency_breakdown["general_generation"] = round(
+                (time.perf_counter() - general_started) * 1000, 2
+            )
+            result.latency_breakdown["external_llm"] = (
+                result.latency_breakdown.get("external_llm", 0.0)
+                + general.get("external_llm_ms", 0.0)
+            )
+            result.latency_breakdown["guardrails"] = 0.0
+            result.latency_breakdown["total"] = round(
+                (time.perf_counter() - threshold_total) * 1000, 2
+            )
+            return result
 
         # guardrails
         gr_start = time.perf_counter()
