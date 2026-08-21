@@ -1,99 +1,19 @@
-import { useEffect, useRef } from "react";
-import Icon from "../Icon/Icon";
-
-const ORBIT_LABELS = [
-  { label: "STT", className: "top-2 -left-2", delay: "0s", duration: "3s" },
-  { label: "VECTOR SEARCH", className: "top-1/2 -right-14", delay: "1s", duration: "4s" },
-  { label: "RAG", className: "-bottom-4 left-6", delay: "0.5s", duration: "3.5s" },
-];
+import { Link } from "react-router-dom";
 
 export default function Hero() {
-  const svgPathRef = useRef(null);
-
-  useEffect(() => {
-    const path = svgPathRef.current;
-    if (!path) return undefined;
-    let length;
-    try {
-      length = path.getTotalLength();
-    } catch {
-      return undefined;
-    }
-    if (!Number.isFinite(length)) return undefined;
-    path.style.strokeDasharray = `${length}`;
-    path.style.strokeDashoffset = `${length}`;
-    const animate = () => {
-      path.style.transition = "stroke-dashoffset 3s ease";
-      path.style.strokeDashoffset = "0";
-    };
-    const timer = setTimeout(animate, 600);
-    return () => clearTimeout(timer);
-  }, []);
-
   return (
-    <section
-      id="top"
-      className="relative min-h-[65vh] flex flex-col justify-center items-center px-margin-mobile md:px-margin-desktop py-14"
-    >
-      <div className="text-center z-10 max-w-4xl mx-auto staggered-item" style={{ animationDelay: "0.1s" }}>
-        <div className="flex flex-wrap justify-center gap-4 mb-8">
-          <span className="chip bg-accent-yellow text-on-surface">HH GOA 2026 · TASK #02</span>
-          <span className="chip bg-surface-variant text-on-surface">VOICE → RAG → ANSWER</span>
+    <section id="top" className="relative min-h-[92vh] md:min-h-screen flex items-center overflow-hidden bg-cream">
+      <img src="/goa-hero.jpeg" alt="Vintage Goa coastline illustration with a lighthouse, palm trees, ocean and sailing boats" className="absolute inset-0 w-full h-full object-cover object-[70%_40%] md:object-center" loading="eager" decoding="async" />
+      <div className="relative z-10 w-full px-margin-mobile md:px-margin-desktop py-24">
+        <div className="max-w-2xl">
+          <h1 className="hero-heading font-display-serif italic font-semibold leading-[1.08] tracking-tight text-[clamp(2.9rem,7.2vw,5.75rem)] drop-shadow-[0_2px_2px_rgba(250,244,228,0.7)]">
+            <span className="block text-sea">Ask Freely,</span>
+            <span className="block text-terracotta">Get Clearly.</span>
+          </h1>
+          <p className="mt-6 font-refined-sans text-[17px] leading-[1.7] font-normal tracking-[0.01em] text-sea-deep max-w-md">Speak your question. We&apos;ll understand,<br />search, and bring you the right answer.</p>
+          <Link to="/ask" className="mt-8 inline-flex items-center gap-3 bg-sea text-paper font-refined-sans text-[13px] font-semibold uppercase tracking-[0.14em] px-6 py-3 border-2 border-sea-deep shadow-[2px_2px_0_0_#0A3E35] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[1px_1px_0_0_#0A3E35] transition-all">Explore Now <span aria-hidden="true">→</span></Link>
         </div>
-        <h1 className="font-display-xl text-display-xl uppercase text-primary leading-none mb-6 hidden md:block">
-          Don&apos;t type.
-          <br />
-          <span className="text-tertiary">Just ask.</span>
-        </h1>
-        <h1 className="font-headline-lg-mobile uppercase text-primary leading-tight mb-6 md:hidden">
-          Don&apos;t type.
-          <br />
-          <span className="text-tertiary">Just ask.</span>
-        </h1>
-        <p className="font-body-md text-body-md text-on-surface-variant max-w-xl mx-auto md:ml-indent-asymmetric border-l-2 border-tertiary pl-4 text-left">
-          Speak a question. We retrieve the signal. You get a grounded answer.
-        </p>
       </div>
-
-      <div className="relative mt-10 staggered-item w-full max-w-sm aspect-square flex items-center justify-center" style={{ animationDelay: "0.3s" }}>
-        <div className="absolute inset-0 border border-dotted border-primary rounded-full spin-slow opacity-50" />
-
-        {ORBIT_LABELS.map((orbit) => (
-          <div
-            key={orbit.label}
-            className={`absolute ${orbit.className} bg-surface text-primary font-meta-mono text-meta-mono uppercase px-2 py-1 border border-primary offset-shadow-sm animate-bounce`}
-            style={{ animationDuration: orbit.duration, animationDelay: orbit.delay }}
-          >
-            {orbit.label}
-          </div>
-        ))}
-
-        <div
-          className="relative w-64 h-64 bg-primary-container organic-blob flex flex-col gap-2 items-center justify-center z-10 offset-shadow"
-          aria-hidden="true"
-        >
-          <Icon name="auto_awesome" size={48} className="text-surface" />
-          <span className="font-headline-lg text-surface uppercase">Ask</span>
-        </div>
-
-        <svg className="absolute inset-0 w-full h-full pointer-events-none spin-reverse" viewBox="0 0 400 400">
-          <path
-            id="hero-curve"
-            ref={svgPathRef}
-            d="M 50, 200 a 150,150 0 1,1 300,0 a 150,150 0 1,1 -300,0"
-            fill="transparent"
-            stroke="#00512c"
-            strokeWidth="1"
-            strokeDasharray="2 6"
-          />
-          <text className="font-meta-mono text-[10px] fill-tertiary tracking-[0.2em] uppercase">
-            <textPath href="#hero-curve" startOffset="0%">
-              VOICE IN • CONTEXT OUT • GROUNDED ANSWERS • VOICE IN • CONTEXT OUT • GROUNDED ANSWERS •
-            </textPath>
-          </text>
-        </svg>
-      </div>
-
     </section>
   );
 }

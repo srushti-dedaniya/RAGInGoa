@@ -101,6 +101,7 @@ class SentenceTransformerEmbedder(Embedder):
         return self._name
 
 
+@lru_cache(maxsize=4)
 def get_embedder(model_name: str = "all-MiniLM-L6-v2", dim: int = 384, allow_fallback: bool = True) -> Embedder:
     """Return SentenceTransformerEmbedder when available, else HashingEmbedder."""
     if model_name.lower() in {"dev", "hashing", "test"}:

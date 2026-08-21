@@ -29,8 +29,15 @@ class GuardrailSummary(BaseModel):
 
 class LatencyBreakdown(BaseModel):
     stt: float = 0.0
+    preprocessing: float = 0.0
+    routing: float = 0.0
+    embedding: float = 0.0
+    vector_search: float = 0.0
+    metadata_filter: float = 0.0
+    reranking: float = 0.0
     retrieval: float = 0.0
     generation: float = 0.0
+    external_llm: float = 0.0
     guardrails: float = 0.0
     total: float = 0.0
 

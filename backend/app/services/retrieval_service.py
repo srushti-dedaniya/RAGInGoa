@@ -62,20 +62,19 @@ class RetrievalService:
     def index_size(self) -> int:
         return self.retriever.index.size() if self.retriever.index else 0
 
-    def retrieve(self, query: str, top_k: int | None = None) -> list[dict]:
-        return self.retriever.retrieve(query, top_k=top_k)
+    def retrieve(
+        self, query: str, top_k: int | None = None, language_code: str = "en-IN"
+    ) -> list[dict]:
+        return self.retriever.retrieve(query, top_k=top_k, language_code=language_code)
 
-    def details(self, query: str, top_k: int | None = None) -> dict:
-        started = time.perf_counter()
-        results = self.retrieve(query, top_k=top_k)
-        latency_ms = round((time.perf_counter() - started) * 1000, 2)
-        return {
-            "query": query,
-            "engine": "FAISS",
-            "top_k": len(results),
-            "latency_ms": latency_ms,
-            "results": results,
-        }
+    def details(
+        self, query: str, top_k: int | None = None, language_code: str = "en-IN"
+    ) -> dict:
+        details = self.retriever.retrieve_with_details(
+            query, top_k=top_k, language_code=language_code
+        )
+        details["engine"] = "FAISS"
+        return details
 
 
 __all__ = ["RetrievalService"]

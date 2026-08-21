@@ -36,6 +36,7 @@ export default function AnswerCard({ result, isProcessing = false, languageCode 
 
   const breakdown = result.latency_breakdown || {};
   const visibleAnswer = cleanAnswer(result.answer);
+  const isConversation = result.intermediate?.input_class === "conversational";
 
   const listen = async () => {
     setAudioError("");
@@ -83,11 +84,11 @@ export default function AnswerCard({ result, isProcessing = false, languageCode 
       <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
         <div className="flex items-center gap-3">
           <Icon name={result.grounded ? "verified" : "info"} size={22} className="text-primary" />
-          <h3 className="font-headline-lg text-headline-lg-mobile uppercase text-primary">
-            {result.grounded ? "Answer" : "Insufficient Context"}
+          <h3 className="font-display-serif italic font-semibold text-primary">
+            {result.grounded || isConversation ? "Answer" : "Insufficient Context"}
           </h3>
         </div>
-        <div className="flex items-center gap-2 font-meta-mono text-meta-mono uppercase">
+        <div className="flex items-center gap-2 font-dm-sans text-[12px] font-medium uppercase tracking-[0.08em]">
           <span className="chip bg-surface-variant">{formatTime()}</span>
         </div>
       </div>
@@ -95,11 +96,11 @@ export default function AnswerCard({ result, isProcessing = false, languageCode 
       {isProcessing ? (
         <div className="flex items-center gap-3 text-on-surface-variant">
           <Icon name="progress_activity" size={20} className="animate-spin text-primary" />
-          <span className="font-meta-mono text-meta-mono uppercase">generating grounded answer…</span>
+          <span className="font-dm-sans text-[12px] font-medium uppercase tracking-[0.08em]">generating grounded answer…</span>
         </div>
       ) : (
         <>
-          <p className="font-body-md text-body-md text-on-surface whitespace-pre-line leading-relaxed" aria-live="polite">
+          <p className="font-dm-sans text-[16px] leading-[1.7] text-on-surface whitespace-pre-line" aria-live="polite">
             {visibleAnswer}
           </p>
 
@@ -130,7 +131,7 @@ export default function AnswerCard({ result, isProcessing = false, languageCode 
           </div>
 
           {result.warnings?.length > 0 && (
-            <div className="mt-4 border border-dotted border-error rounded-lg px-4 py-3 font-meta-mono text-meta-mono text-error">
+            <div className="mt-4 border border-dotted border-error rounded-lg px-4 py-3 font-dm-sans text-[13px] text-error">
               {result.warnings.map((w) => (
                 <p key={w}>⚠ {w}</p>
               ))}
@@ -149,11 +150,11 @@ function LatencyTile({ label, ms, icon, highlight = false }) {
         highlight ? "bg-primary text-on-primary border-primary" : "bg-surface border-outline-variant"
       }`}
     >
-      <div className="flex items-center gap-1.5 font-meta-mono text-meta-mono uppercase opacity-80">
+      <div className="flex items-center gap-1.5 font-dm-sans text-[12px] font-medium uppercase tracking-[0.08em] opacity-80">
         <Icon name={icon} size={14} />
         {label}
       </div>
-      <div className="font-body-bold text-body-bold">{formatLatency(ms)}</div>
+      <div className="font-dm-sans text-[16px] font-semibold">{formatLatency(ms)}</div>
     </div>
   );
 }

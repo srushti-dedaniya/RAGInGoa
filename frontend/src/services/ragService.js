@@ -1,7 +1,7 @@
 import { apiGet, apiPost, apiPostBlob } from "./api";
 import { DEMO_RESULT, DEMO_BENCHMARK, DEMO_HEALTH } from "../utils/constants";
 
-const demoQuery = import.meta.env.VITE_DEMO_QUERY || "What is the best time to visit Palolem in Goa?";
+const demoQuery = import.meta.env.VITE_DEMO_QUERY || "";
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 

@@ -28,7 +28,7 @@ export default function Pipeline({ activeStage = null, isProcessing = false, com
                 size={20}
                 className={isActive ? "animate-pulse" : ""}
               />
-              <span className="font-meta-mono text-meta-mono uppercase text-center leading-tight">
+              <span className="font-dm-sans text-[12px] font-medium uppercase tracking-[0.08em] text-center leading-tight">
                 {compact ? stage.label.split(" ")[0] : stage.label}
               </span>
             </div>

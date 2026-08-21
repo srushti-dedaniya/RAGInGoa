@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException, Request
 
-from ..config.constants import DEMO_QUERIES
 from ..models.request import BenchmarkRequest
 from ..models.response import BenchmarkResult
 
@@ -23,7 +22,7 @@ async def get_benchmark(request: Request) -> BenchmarkResult:
 @router.post("", response_model=BenchmarkResult)
 async def run_benchmark(request: Request, payload: BenchmarkRequest | None = None) -> BenchmarkResult:
     services = request.app.state.services
-    queries = payload.queries if payload and payload.queries else DEMO_QUERIES
+    queries = payload.queries if payload and payload.queries else None
     top_k = payload.top_k if payload else None
     try:
         report = services.benchmark(queries, top_k)

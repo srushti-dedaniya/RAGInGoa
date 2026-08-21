@@ -10,7 +10,6 @@ from pathlib import Path
 import numpy as np
 
 from backend.app.config.settings import get_settings
-from backend.app.services.generation_service import GenerationService
 from rag.embeddings.embedder import get_embedder
 from rag.retrieval.retriever import Retriever
 from rag.retrieval.retrieval_config import RetrievalConfig
@@ -28,7 +27,7 @@ def _stats(values: list[float]) -> dict:
 
 def run_benchmark(queries: list[str] | None = None, top_k: int = 4, repetitions: int = 1,
                   out: str | None = None, query_count: int = 100,
-                  include_generation: bool = False) -> dict:
+                  include_generation: bool = False, pipeline=None) -> dict:
     settings = get_settings()
     embedder = get_embedder(settings.EMBEDDING_MODEL, settings.EMBEDDING_DIM,
                             allow_fallback=False)
@@ -36,21 +35,44 @@ def run_benchmark(queries: list[str] | None = None, top_k: int = 4, repetitions:
     if not index or not index.size():
         raise RuntimeError("persistent index missing; build it before benchmarking")
     retriever = Retriever(embedder, index, RetrievalConfig(top_k=top_k))
-    generator = GenerationService(settings) if include_generation else None
+    if include_generation and pipeline is None:
+        from backend.app.main import Services
+        pipeline = Services(settings).pipeline
     queries = queries or [m.get("query") or m.get("english_query") or " ".join(t.split()[:12])
                           for m, t in zip(index.meta, index.texts)]
     queries = list(dict.fromkeys(q for q in queries if q))[:max(1, query_count)]
     retriever.retrieve(queries[0], top_k)  # warm models and index
     totals: list[float] = []
-    stages = {name: [] for name in ("preprocess", "embedding", "retrieval", "context", "generation", "grounding")}
+    stages = {name: [] for name in (
+        "preprocess", "routing", "embedding", "vector_search", "reranking",
+        "retrieval", "context", "generation", "external_llm", "grounding",
+    )}
     for _ in range(max(1, repetitions)):
         for raw in queries:
+            if include_generation:
+                completed = pipeline.run_text(raw, top_k=top_k, language_code="en-IN")
+                breakdown = completed.latency_breakdown
+                totals.append(float(breakdown.get("total", 0.0)))
+                stages["preprocess"].append(float(breakdown.get("preprocessing", 0.0)))
+                stages["routing"].append(float(breakdown.get("routing", 0.0)))
+                stages["embedding"].append(float(breakdown.get("embedding", 0.0)))
+                stages["vector_search"].append(float(breakdown.get("vector_search", 0.0)))
+                stages["reranking"].append(float(breakdown.get("reranking", 0.0)))
+                stages["retrieval"].append(float(breakdown.get("retrieval", 0.0)))
+                stages["context"].append(0.0)
+                stages["generation"].append(float(breakdown.get("generation", 0.0)))
+                stages["external_llm"].append(float(breakdown.get("external_llm", 0.0)))
+                stages["grounding"].append(float(breakdown.get("guardrails", 0.0)))
+                continue
             total_start = time.perf_counter()
             start = time.perf_counter(); query = " ".join(raw.split()); stages["preprocess"].append((time.perf_counter()-start)*1000)
+            stages["routing"].append(0.0)
             start = time.perf_counter(); vector = embedder.embed(query); stages["embedding"].append((time.perf_counter()-start)*1000)
-            start = time.perf_counter(); hits = index.search(vector, top_k); stages["retrieval"].append((time.perf_counter()-start)*1000)
+            start = time.perf_counter(); hits = index.search(vector, top_k); search_ms=(time.perf_counter()-start)*1000; stages["vector_search"].append(search_ms); stages["retrieval"].append(search_ms)
+            stages["reranking"].append(0.0)
             start = time.perf_counter(); context = [{"chunk_id": h.chunk_id, "text": h.text, "metadata": h.metadata, "score": h.score} for h in hits if h.score >= settings.SIMILARITY_THRESHOLD]; stages["context"].append((time.perf_counter()-start)*1000)
-            start = time.perf_counter(); answer = generator.generate(query, context)["answer"] if include_generation and context else ""; stages["generation"].append((time.perf_counter()-start)*1000)
+            answer = ""; stages["generation"].append(0.0)
+            stages["external_llm"].append(0.0)
             start = time.perf_counter(); _ = bool(answer and "[Source:" in answer); stages["grounding"].append((time.perf_counter()-start)*1000)
             totals.append((time.perf_counter()-total_start)*1000)
     report = {"run_at": datetime.now(timezone.utc).isoformat(), "queries": len(totals),

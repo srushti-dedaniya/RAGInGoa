@@ -10,6 +10,7 @@ from .error_handler import PipelineError, guard_stage, handle
 from .retry import RetryPolicy
 from .schemas import PipelineResult, StageResult
 from ..guardrails.safety import safety_check
+from .interaction import is_conversational, resolve_language
 
 
 class Pipeline:
@@ -33,8 +34,10 @@ class Pipeline:
         return self.stt.transcribe(audio_bytes, filename, language_code, content_type)
 
     @guard_stage("retrieval")
-    def _retrieval_step(self, query: str, top_k: int | None) -> tuple[dict, list[dict]]:
-        details = self.retrieval.details(query, top_k=top_k)
+    def _retrieval_step(
+        self, query: str, top_k: int | None, language_code: str
+    ) -> tuple[dict, list[dict]]:
+        details = self.retrieval.details(query, top_k=top_k, language_code=language_code)
         results = details["results"]
         threshold = self.settings.SCORE_THRESHOLD
         if threshold > 0:
@@ -71,6 +74,8 @@ class Pipeline:
         self, query: str, transcript: dict | None, top_k: int | None, language_code: str
     ) -> PipelineResult:
         result = PipelineResult(query=query)
+        preprocess_started = time.perf_counter()
+        language_code = resolve_language(query, language_code)
         result.engine.update({
             "stt": self.settings.STT_ROUTER,
             "llm": (
@@ -82,22 +87,51 @@ class Pipeline:
             "embedding": self.retrieval.embedder.model_name(),
         })
         threshold_total = time.perf_counter()
+        result.latency_breakdown["preprocessing"] = round(
+            (threshold_total - preprocess_started) * 1000, 2
+        )
 
         transcript = transcript or {"transcript": query, "latency_ms": 0.0, "engine": self.settings.STT_ROUTER}
         result.engine["stt"] = transcript.get("engine", self.settings.STT_ROUTER)
         result.latency_breakdown["stt"] = transcript.get("latency_ms", 0.0)
+        result.intermediate["language_code"] = language_code
+        result.intermediate["input_class"] = "knowledge"
 
+        routing_started = time.perf_counter()
         safety = safety_check(query)
         if not safety.passed:
-            result.answer = "I can’t help with that request."
+            result.latency_breakdown["routing"] = round((time.perf_counter()-routing_started)*1000, 2)
+            result.intermediate["input_class"] = "unsafe"
+            result.answer = self._unsafe_answer(language_code)
             result.guardrails = [safety.as_dict()]
             result.latency_breakdown.update({"retrieval": 0.0, "generation": 0.0, "guardrails": 0.0,
                                              "total": round((time.perf_counter()-threshold_total)*1000, 2)})
             return result
 
+        if is_conversational(query):
+            result.intermediate["input_class"] = "conversational"
+            result.latency_breakdown["routing"] = round((time.perf_counter()-routing_started)*1000, 2)
+            g_start = time.perf_counter()
+            gen = self.retry.run(
+                lambda: self.generation.generate_conversation(query, language_code),
+                stage="conversation",
+            )
+            result.answer = gen["answer"]
+            result.engine["llm"] = gen.get("provider", self.settings.LLM_ROUTER)
+            result.guardrails = [{"name": "safety", "passed": True,
+                                  "reason": "safe conversational interaction", "score": 1.0}]
+            result.latency_breakdown.update({"retrieval": 0.0,
+                                             "generation": round((time.perf_counter()-g_start)*1000, 2),
+                                             "external_llm": gen.get("external_llm_ms", 0.0),
+                                             "guardrails": 0.0,
+                                             "total": round((time.perf_counter()-threshold_total)*1000, 2)})
+            return result
+
+        result.latency_breakdown["routing"] = round((time.perf_counter()-routing_started)*1000, 2)
+
         # retrieval
         r_start = time.perf_counter()
-        details, sources = self._retrieval_step(query, top_k)
+        details, sources = self._retrieval_step(query, top_k, language_code)
         result.latency_breakdown["retrieval"] = round((time.perf_counter() - r_start) * 1000, 2)
         result.engine["vector_db"] = details.get("engine", self.settings.VECTOR_DB_ROUTER)
         result.engine["embedding"] = self.retrieval.embedder.model_name()
@@ -105,9 +139,12 @@ class Pipeline:
         result.intermediate["transcript"] = transcript.get("transcript", query)
         result.intermediate["retrieved_count"] = len(sources)
         result.intermediate["retrieval_top_k"] = len(sources)
+        result.intermediate["retrieval_profile"] = details.get("profile", {})
+        result.latency_breakdown.update(details.get("profile", {}))
         result.stages.append(StageResult(name="retrieval", ok=True, latency_ms=result.latency_breakdown["retrieval"]))
 
         if not sources:
+            result.intermediate["input_class"] = "unsupported"
             result.answer = self._insufficient_answer(language_code)
             result.guardrails = [{"name": "relevance", "passed": False,
                                   "reason": "no result met the similarity threshold", "score": 0.0}]
@@ -120,6 +157,7 @@ class Pipeline:
         gen = self._generation_step(query, sources, language_code)
         result.latency_breakdown["generation"] = round((time.perf_counter() - g_start) * 1000, 2)
         result.engine["llm"] = gen.get("provider", self.settings.LLM_ROUTER)
+        result.latency_breakdown["external_llm"] = gen.get("external_llm_ms", 0.0)
         result.answer = gen["answer"]
         result.stages.append(StageResult(name="generation", ok=True, latency_ms=result.latency_breakdown["generation"]))
 
@@ -142,6 +180,13 @@ class Pipeline:
             "hi-IN": "उपलब्ध स्रोतों में इस प्रश्न का पर्याप्त उत्तर नहीं मिला।",
             "mr-IN": "उपलब्ध स्रोतांमध्ये या प्रश्नाचे पुरेसे उत्तर मिळाले नाही.",
         }.get(language_code, "The available sources do not contain enough information to answer this question.")
+
+    @staticmethod
+    def _unsafe_answer(language_code: str) -> str:
+        return {
+            "hi-IN": "मैं इस अनुरोध में मदद नहीं कर सकता।",
+            "mr-IN": "मी या विनंतीमध्ये मदत करू शकत नाही.",
+        }.get(language_code, "I can’t help with that request.")
 
     def to_response_dict(self, result: PipelineResult) -> dict:
         guard = {"passed": all(s.ok for s in result.stages if s.name == "guardrails") or True, "checks": result.guardrails}

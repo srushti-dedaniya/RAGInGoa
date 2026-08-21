@@ -55,6 +55,12 @@ export default {
         "on-tertiary-fixed-variant": "#8e0047",
         "surface": "#fdf8f8",
         "tertiary-container": "#b7005e",
+        "sea": "#0E5145",
+        "sea-deep": "#0A3E35",
+        "terracotta": "#C4572F",
+        "cream": "#F6EEDC",
+        "paper": "#FBF4E4",
+        "sand": "#E5D6B4",
       },
       fontFamily: {
         "display-xl": ["Outfit", "ui-sans-serif", "system-ui", "sans-serif"],
@@ -63,6 +69,9 @@ export default {
         "meta-mono": ["JetBrains Mono", "ui-monospace", "SF Mono", "monospace"],
         "headline-lg": ["Outfit", "ui-sans-serif", "system-ui", "sans-serif"],
         "body-bold": ["Manrope", "ui-sans-serif", "system-ui", "sans-serif"],
+        "display-serif": ["Cormorant Garamond", "Playfair Display", "Georgia", "serif"],
+        "refined-sans": ["Raleway", "Manrope", "ui-sans-serif", "system-ui", "sans-serif"],
+        "dm-sans": ["DM Sans", "Raleway", "Manrope", "ui-sans-serif", "system-ui", "sans-serif"],
       },
       fontSize: {
         "display-xl": ["72px", { lineHeight: "74px", letterSpacing: "-0.02em", fontWeight: "700" }],

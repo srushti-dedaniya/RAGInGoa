@@ -13,11 +13,11 @@ export default function Guardrails() {
     <section id="guardrails" className="px-margin-mobile md:px-margin-desktop py-16 bg-surface-container/40">
       <div className="max-w-5xl mx-auto" ref={ref}>
         <div className="text-center mb-10">
-          <span className="chip bg-surface-variant text-on-surface">GUARDRAILS</span>
-          <h2 className="font-headline-lg text-headline-lg-mobile uppercase text-primary mt-4">
+          <span className="chip font-dm-sans bg-surface-variant text-on-surface">GUARDRAILS</span>
+          <h2 className="font-display-serif italic font-semibold text-primary mt-4 text-4xl md:text-5xl leading-tight">
             Grounded. Or nothing.
           </h2>
-          <p className="font-meta-mono text-meta-mono uppercase text-secondary mt-2">
+          <p className="font-dm-sans text-[12px] font-medium uppercase tracking-[0.08em] text-secondary mt-2">
             SAFETY · RELEVANCE · GROUNDING · REFUSAL
           </p>
         </div>
@@ -47,12 +47,12 @@ export default function Guardrails() {
                 >
                   <Icon name={check ? (check.passed ? "check" : "close") : guard.icon} size={22} />
                 </div>
-                <h3 className="font-body-bold text-body-bold uppercase text-on-surface">{guard.label}</h3>
-                <p className="font-meta-mono text-meta-mono uppercase mt-1 text-on-surface-variant min-h-[2em]">
+                <h3 className="font-dm-sans text-[14px] font-semibold uppercase text-on-surface">{guard.label}</h3>
+                <p className="font-dm-sans text-[12px] font-medium uppercase tracking-[0.08em] mt-1 text-on-surface-variant min-h-[2em]">
                   {check ? (check.passed ? "passed" : "blocked") : "idle"}
                 </p>
                 {check && (
-                  <p className="font-meta-mono text-meta-mono text-xs mt-2 text-secondary">
+                  <p className="font-dm-sans text-[12px] mt-2 text-secondary">
                     {check.reason}
                   </p>
                 )}
@@ -62,7 +62,7 @@ export default function Guardrails() {
         </div>
 
         {lastQuery && (
-          <p className="mt-6 text-center font-meta-mono text-meta-mono uppercase">
+          <p className="mt-6 text-center font-dm-sans text-[12px] font-medium uppercase tracking-[0.08em]">
             Last answer:{" "}
             <span className={passed ? "text-primary" : "text-error"}>
               {passed ? "all guardrails passed" : "guardrail failed"}

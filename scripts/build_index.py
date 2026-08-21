@@ -18,18 +18,22 @@ from backend.app.config.settings import get_settings  # reuse backend settings
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Build the RAGInGoa vector index.")
-    parser.add_argument("--data", default=None, help="normalized corpus path (default: MSMARCO-XI)")
+    parser.add_argument(
+        "--data", action="append", default=None,
+        help="normalized corpus path; repeat for a multilingual index (default: configured MSMARCO-XI)",
+    )
     parser.add_argument("--strategy", default=None, help="chunking strategy")
     parser.add_argument("--out", default=None, help="index output dir")
     args = parser.parse_args(argv)
 
     settings = get_settings()
-    data_path = args.data or str(settings.dataset_path)
+    data_paths = args.data or [str(settings.dataset_path)]
     strategy = args.strategy or settings.CHUNK_STRATEGY
     out_dir = args.out or str(settings.index_path)
 
-    docs = read_data(data_path)
-    print(f"documents: {len(docs)}")
+    docs = [doc for data_path in data_paths for doc in read_data(data_path)]
+    languages = sorted({str(doc.get("metadata", {}).get("language", "unknown")) for doc in docs})
+    print(f"documents: {len(docs)} languages={','.join(languages)}")
 
     chunk_config = {"size": settings.CHUNK_SIZE, "overlap": settings.CHUNK_OVERLAP}
     manager = ChunkManager(strategy, chunk_config)

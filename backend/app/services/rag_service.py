@@ -46,7 +46,10 @@ class RAGService:
         from rag.benchmarking.benchmark import run_benchmark
 
         search_top_k = top_k or self.settings.BENCHMARK_TOP_K
-        report = run_benchmark(queries=queries, top_k=search_top_k)
+        report = run_benchmark(
+            queries=queries, top_k=search_top_k, query_count=100,
+            include_generation=True, pipeline=self.pipeline,
+        )
         report["engine_stt"] = self.settings.STT_ROUTER
         report["engine_llm"] = self.settings.LLM_ROUTER
         return report
