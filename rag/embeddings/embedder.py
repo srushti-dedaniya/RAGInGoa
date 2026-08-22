@@ -162,23 +162,27 @@ class OnnxEmbedder(Embedder):
         vector = vector / (np.linalg.norm(vector) or 1e-9)
         return tuple(float(v) for v in vector)
 
-    def embed_batch(self, texts: list[str]) -> list[list[float]]:
+    def embed_batch(self, texts: list[str], batch_size: int = 64) -> list[list[float]]:
         import numpy as np
 
         if not texts:
             return []
-        encoded = self._tokenizer.encode_batch(list(texts))
-        hidden = self._session.run(
-            ["last_hidden_state"],
-            {
-                "input_ids": np.array([e.ids for e in encoded], dtype=np.int64),
-                "attention_mask": np.array([e.attention_mask for e in encoded], dtype=np.int64),
-            },
-        )[0]
-        pooled = self._mean_pool(hidden, np.array([e.attention_mask for e in encoded]))
-        norms = np.linalg.norm(pooled, axis=1, keepdims=True)
-        pooled = pooled / np.clip(norms, 1e-9, None)
-        return [row.tolist() for row in pooled]
+        out: list[list[float]] = []
+        for i in range(0, len(texts), batch_size):
+            chunk = texts[i : i + batch_size]
+            encoded = self._tokenizer.encode_batch(chunk)
+            hidden = self._session.run(
+                ["last_hidden_state"],
+                {
+                    "input_ids": np.array([e.ids for e in encoded], dtype=np.int64),
+                    "attention_mask": np.array([e.attention_mask for e in encoded], dtype=np.int64),
+                },
+            )[0]
+            pooled = self._mean_pool(hidden, np.array([e.attention_mask for e in encoded]))
+            norms = np.linalg.norm(pooled, axis=1, keepdims=True)
+            pooled = pooled / np.clip(norms, 1e-9, None)
+            out.extend(row.tolist() for row in pooled)
+        return out
 
     def model_name(self) -> str:
         return self._name
