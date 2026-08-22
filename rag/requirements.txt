@@ -1,9 +1,10 @@
 numpy>=1.24
-sentence-transformers==3.0.1
+onnxruntime>=1.17
+tokenizers>=0.15
 faiss-cpu>=1.8
 datasets>=3.0
 # --- Optional providers (install to unlock real engines) ---
-# sentence-transformers>=2.6   # real embeddings
+# sentence-transformers>=3.0   # torch embeddings fallback (ONNX embedder preferred)
 # chromadb>=0.4                 # chromadb vector store
 # openai>=1.30                  # real LLM grounding
 # jupyter>=1.0                  # notebooks

@@ -1,8 +1,9 @@
 """Embedding providers.
 
-``get_embedder`` returns the best available provider: sentence-transformers when
-installed, otherwise a deterministic hashing embedder so the pipeline runs
-offline without breaking imports.
+``get_embedder`` returns the best available provider: a torch-free ONNX Runtime
+embedder when the exported model is present, otherwise sentence-transformers,
+otherwise a deterministic hashing embedder so the pipeline runs offline without
+breaking imports.
 """
 
 from __future__ import annotations
@@ -11,8 +12,11 @@ import hashlib
 import logging
 import math
 from functools import lru_cache
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
+
+ONNX_DIR = Path(__file__).resolve().parent / "onnx"
 
 
 class Embedder:
@@ -101,11 +105,102 @@ class SentenceTransformerEmbedder(Embedder):
         return self._name
 
 
+class OnnxEmbedder(Embedder):
+    """Torch-free embedder running the exported MiniLM graph via ONNX Runtime.
+
+    Produces the same vectors as sentence-transformers (mean pooling over token
+    embeddings + L2 normalisation), so indexes built with either provider stay
+    compatible.
+    """
+
+    def __init__(
+        self,
+        model_dir: Path = ONNX_DIR,
+        model_name: str = "all-MiniLM-L6-v2",
+        dim: int = 384,
+        max_length: int = 256,
+    ) -> None:
+        super().__init__(dim=dim)
+        import onnxruntime as ort
+        from tokenizers import Tokenizer
+
+        options = ort.SessionOptions()
+        options.intra_op_num_threads = 1
+        options.inter_op_num_threads = 1
+        self._session = ort.InferenceSession(
+            str(model_dir / "model.onnx"),
+            sess_options=options,
+            providers=["CPUExecutionProvider"],
+        )
+        self._tokenizer = Tokenizer.from_file(str(model_dir / "tokenizer.json"))
+        self._tokenizer.enable_truncation(max_length=max_length)
+        self._tokenizer.enable_padding()
+        self._name = model_name
+
+    @staticmethod
+    def _mean_pool(hidden, mask):
+        import numpy as np
+
+        mask = mask[:, :, None].astype(hidden.dtype)
+        summed = (hidden * mask).sum(axis=1)
+        counts = np.clip(mask.sum(axis=1), 1e-9, None)
+        return summed / counts
+
+    @lru_cache(maxsize=512)
+    def embed(self, text: str) -> tuple[float, ...]:
+        import numpy as np
+
+        encoded = self._tokenizer.encode(text)
+        hidden = self._session.run(
+            ["last_hidden_state"],
+            {
+                "input_ids": np.array([encoded.ids], dtype=np.int64),
+                "attention_mask": np.array([encoded.attention_mask], dtype=np.int64),
+            },
+        )[0]
+        vector = self._mean_pool(hidden, np.array([encoded.attention_mask]))[0]
+        vector = vector / (np.linalg.norm(vector) or 1e-9)
+        return tuple(float(v) for v in vector)
+
+    def embed_batch(self, texts: list[str]) -> list[list[float]]:
+        import numpy as np
+
+        if not texts:
+            return []
+        encoded = self._tokenizer.encode_batch(list(texts))
+        hidden = self._session.run(
+            ["last_hidden_state"],
+            {
+                "input_ids": np.array([e.ids for e in encoded], dtype=np.int64),
+                "attention_mask": np.array([e.attention_mask for e in encoded], dtype=np.int64),
+            },
+        )[0]
+        pooled = self._mean_pool(hidden, np.array([e.attention_mask for e in encoded]))
+        norms = np.linalg.norm(pooled, axis=1, keepdims=True)
+        pooled = pooled / np.clip(norms, 1e-9, None)
+        return [row.tolist() for row in pooled]
+
+    def model_name(self) -> str:
+        return self._name
+
+
+def onnx_available() -> bool:
+    try:
+        import onnxruntime  # noqa: F401
+        from tokenizers import Tokenizer  # noqa: F401
+    except ImportError:
+        return False
+    return (ONNX_DIR / "model.onnx").exists() and (ONNX_DIR / "tokenizer.json").exists()
+
+
 @lru_cache(maxsize=4)
 def get_embedder(model_name: str = "all-MiniLM-L6-v2", dim: int = 384, allow_fallback: bool = True) -> Embedder:
-    """Return SentenceTransformerEmbedder when available, else HashingEmbedder."""
+    """Return OnnxEmbedder when available, else sentence-transformers, else HashingEmbedder."""
     if model_name.lower() in {"dev", "hashing", "test"}:
         return HashingEmbedder(dim=dim)
+    if model_name.lower() == "all-minilm-l6-v2" and onnx_available():
+        logger.info("using torch-free ONNX embedder")
+        return OnnxEmbedder(model_name=model_name, dim=dim)
     try:
         return SentenceTransformerEmbedder(model_name=model_name, dim=dim)
     except ImportError:  # pragma: no cover - runs only when lib missing
@@ -117,4 +212,4 @@ def get_embedder(model_name: str = "all-MiniLM-L6-v2", dim: int = 384, allow_fal
         return HashingEmbedder(dim=dim)
 
 
-__all__ = ["Embedder", "HashingEmbedder", "SentenceTransformerEmbedder", "get_embedder"]
+__all__ = ["Embedder", "HashingEmbedder", "OnnxEmbedder", "SentenceTransformerEmbedder", "get_embedder", "onnx_available"]

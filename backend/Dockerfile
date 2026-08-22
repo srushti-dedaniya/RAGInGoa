@@ -23,9 +23,6 @@ COPY rag/requirements.txt ./rag-requirements.txt
 COPY backend/requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r ./rag-requirements.txt -r ./requirements.txt
 
-# Pre-download sentence-transformers model to avoid runtime download
-RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')"
-
 COPY backend/app ./backend/app
 COPY scripts/ ./scripts/
 
