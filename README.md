@@ -43,23 +43,23 @@ This prevents the system from blindly answering every question through retrieval
                     │  Query Router   │
                     └────────┬────────┘
                              │
-                  ┌──────────┴──────────┐
-                  ▼                     ▼
-           RAG Relevant            General Query
-                  │                     │
-                  ▼                     ▼
-           Query Embedding             LLM
-                  │                     │
-                  ▼                     │
-            FAISS Search                │
-                  │                     │
-                  ▼                     │
-           Retrieved Context            │
-                  │                     │
-                  ▼                     │
-          Grounded Generation           │
-                  │                     │
-                  └──────────┬──────────┘
+                   ┌──────────┴──────────┐
+                   ▼                     ▼
+            RAG Relevant            General Query
+                   │                     │
+                   ▼                     ▼
+            Query Embedding             LLM
+                   │                     │
+                   ▼                     │
+             FAISS Search                │
+                   │                     │
+                   ▼                     │
+            Retrieved Context            │
+                   │                     │
+                   ▼                     │
+           Grounded Generation           │
+                   │                     │
+                   └──────────┴──────────┘
                              ▼
                     ┌─────────────────┐
                     │    Guardrails   │
@@ -70,3 +70,4 @@ This prevents the system from blindly answering every question through retrieval
                     │  Final Answer   │
                     │   + Listen      │
                     └─────────────────┘
+```
