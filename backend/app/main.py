@@ -33,7 +33,6 @@ from rag.embeddings.embedder import get_embedder  # noqa: E402
 
 
 class Services:
-    """Shared, lazily-built service container."""
 
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
