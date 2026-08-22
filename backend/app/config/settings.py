@@ -29,6 +29,8 @@ class Settings(BaseSettings):
     # Providers
     OPENAI_API_KEY: str = ""
     LLM_API_KEY: str = ""
+    LLM_BASE_URL: str = ""
+    LLM_REASONING_EFFORT: str = ""
     SARVAM_API_KEY: str = ""
     SARVAM_STT_URL: str = "https://api.sarvam.ai/speech-to-text"
     SARVAM_STT_MODEL: str = "saaras:v3"

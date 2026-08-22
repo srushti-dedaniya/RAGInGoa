@@ -22,7 +22,7 @@ export class RagService {
   async runQuery(query, { onStage = null, topK = null, languageCode = "en-IN" } = {}) {
     if (this.demo) {
       if (onStage) {
-        for (const stage of ["stt", "retrieval", "rerank", "generation", "guardrails"]) {
+        for (const stage of ["listening", "transcribing", "retrieving", "generating"]) {
           onStage(stage);
           await sleep(120);
         }
@@ -31,14 +31,16 @@ export class RagService {
       return { ...DEMO_RESULT, query: query || DEMO_RESULT.query };
     }
 
+    let generateTimer = null;
     try {
-      if (onStage) onStage("retrieval");
       const payload = { query, language_code: languageCode };
       if (topK) payload.top_k = topK;
-      const data = await apiPost("/query", payload);
-      if (onStage) onStage("guardrails");
-      return data;
-    } catch (error) { throw error; }
+      if (onStage) {
+        onStage("retrieving");
+        generateTimer = setTimeout(() => onStage("generating"), 900);
+      }
+      return await apiPost("/query", payload);
+    } finally { if (generateTimer) clearTimeout(generateTimer); }
   }
 
   async getHealth() {
@@ -75,17 +77,34 @@ export class RagService {
     }
     const form = new FormData();
     form.append("file", blob, audioFilename(blob));
-    try {
-      return await apiPost(`/transcribe?language_code=${encodeURIComponent(languageCode)}`, form, 30000);
-    } catch (error) { throw error; }
+    return apiPost(`/transcribe?language_code=${encodeURIComponent(languageCode)}`, form, 30000);
   }
 
-  async runVoice(blob, { topK = null, languageCode = "unknown" } = {}) {
+  async runVoice(blob, { topK = null, languageCode = "unknown", fallbackQuery = "", onStage = null } = {}) {
+    const notify = (stage) => { if (onStage) onStage(stage); };
+
+    if (this.demo) {
+      for (const stage of ["listening", "transcribing", "retrieving", "generating"]) {
+        notify(stage);
+        await sleep(120);
+      }
+      return { ...DEMO_RESULT, query: fallbackQuery || DEMO_RESULT.query };
+    }
+
+    notify("transcribing");
     const form = new FormData();
     form.append("file", blob, audioFilename(blob));
     const params = new URLSearchParams({ language_code: languageCode });
-    if (topK) params.set("top_k", String(topK));
-    return apiPost(`/rag/voice?${params}`, form, 60000);
+    const transcriptData = await apiPost(`/transcribe?${params}`, form, 30000);
+    let transcript = (transcriptData?.transcript || "").trim();
+    if (!transcript && fallbackQuery.trim()) transcript = fallbackQuery.trim();
+    if (!transcript) {
+      const error = new Error("Couldn't understand the recording. Please try again.");
+      error.code = "speech_not_understood";
+      throw error;
+    }
+    const data = await this.runQuery(transcript, { topK, languageCode, onStage });
+    return { ...data, voice_fallback: transcript === fallbackQuery.trim() || undefined };
   }
 
   async synthesize(text, { languageCode = "en-IN" } = {}) {

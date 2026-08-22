@@ -6,6 +6,15 @@ const ICON_PATHS = {
       <line x1="12" x2="12" y1="19" y2="22" />
     </>
   ),
+  graphic_eq: (
+    <>
+      <line x1="4" x2="4" y1="9" y2="15" />
+      <line x1="8" x2="8" y1="5" y2="19" />
+      <line x1="12" x2="12" y1="3" y2="21" />
+      <line x1="16" x2="16" y1="5" y2="19" />
+      <line x1="20" x2="20" y1="9" y2="15" />
+    </>
+  ),
   stop: <rect x="6" y="6" width="12" height="12" rx="1.5" />,
   check: <path d="M20 6 9 17l-5-5" />,
   close: (

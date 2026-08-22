@@ -3,11 +3,10 @@ export const API_PREFIX = "/api";
 export const DEMO_QUERY = "What is the best time to visit Palolem in Goa?";
 
 export const PIPELINE_STAGES = [
-  { id: "stt", label: "STT", icon: "mic", description: "Speech to text" },
-  { id: "retrieval", label: "VECTOR SEARCH", icon: "database", description: "Embed + retrieve" },
-  { id: "rerank", label: "RERANK", icon: "swap_vert", description: "Order by relevance" },
-  { id: "generation", label: "GENERATION", icon: "auto_awesome", description: "Grounded answer" },
-  { id: "guardrails", label: "GUARDRAILS", icon: "verified_user", description: "Safety + grounding" },
+  { id: "listening", label: "LISTENING", icon: "mic", description: "Capture your voice" },
+  { id: "transcribing", label: "TRANSCRIBING", icon: "graphic_eq", description: "Speech to text" },
+  { id: "retrieving", label: "RETRIEVING", icon: "database", description: "Embed + retrieve" },
+  { id: "generating", label: "GENERATING", icon: "auto_awesome", description: "Grounded answer" },
 ];
 
 export const GUARDRAIL_NAMES = [

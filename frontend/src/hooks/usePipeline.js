@@ -46,21 +46,11 @@ export function usePipeline() {
     blob,
     { topK = null, languageCode = "unknown", fallbackQuery = "" } = {}
   ) => {
-    setIsProcessing(true); setError(null); setResult(null); setActiveStage("stt");
+    setIsProcessing(true); setError(null); setResult(null); setActiveStage("transcribing");
     try {
-      const data = await ragService.runVoice(blob, { topK, languageCode });
+      const data = await ragService.runVoice(blob, { topK, languageCode, fallbackQuery, onStage: setActiveStage });
       setResult(data); setLatestQuery(data); setActiveStage(null); return data;
     } catch (err) {
-      const usableQuery = fallbackQuery.trim();
-      if (err?.code === "speech_not_understood" && usableQuery) {
-        setActiveStage("retrieval");
-        const data = await ragService.runQuery(usableQuery, { topK, languageCode });
-        const fallbackResult = { ...data, voice_fallback: true };
-        setResult(fallbackResult);
-        setLatestQuery(fallbackResult);
-        setActiveStage(null);
-        return fallbackResult;
-      }
       setError(
         err?.code === "speech_not_understood"
           ? "Couldn't understand the recording. Please try again."

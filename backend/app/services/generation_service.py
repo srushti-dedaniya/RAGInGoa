@@ -20,6 +20,12 @@ class GenerationService:
         self.settings = settings
         self.router = settings.LLM_ROUTER.lower()
         self._client = self._make_client()
+        if self.settings.LLM_REASONING_EFFORT:
+            self._extra_body = {"reasoning_effort": self.settings.LLM_REASONING_EFFORT}
+        elif self.settings.LLM_BASE_URL:
+            self._extra_body = {}
+        else:
+            self._extra_body = {"reasoning_effort": None}
 
     def _make_client(self):
         if self.router not in {"openai", "sarvam"}:
@@ -30,7 +36,7 @@ class GenerationService:
             base_url = self.settings.SARVAM_LLM_URL
         else:
             key = self.settings.LLM_API_KEY or self.settings.OPENAI_API_KEY
-            base_url = None
+            base_url = self.settings.LLM_BASE_URL or None
         if not key:
             raise GenerationError(f"{self.router.upper()} API key is not configured")
         return OpenAI(
@@ -99,8 +105,8 @@ class GenerationService:
             "If the answer depends on live or uncertain information, say that clearly instead of guessing."
         )
         response = self._client.chat.completions.create(
-            model=self.settings.LLM_MODEL, temperature=0.2, max_tokens=48,
-            extra_body={"reasoning_effort": None},
+            model=self.settings.LLM_MODEL, temperature=0.2, max_tokens=192,
+            extra_body=self._extra_body,
             messages=[
                 {"role": "system", "content": (
                     f"Reply naturally in {language}. {purpose} Use at most two short sentences."
@@ -181,8 +187,8 @@ class GenerationService:
         )
         response = self._client.chat.completions.create(
             model=self.settings.LLM_MODEL, temperature=0,
-            max_tokens=96,
-            extra_body={"reasoning_effort": None},
+            max_tokens=384,
+            extra_body=self._extra_body,
             messages=[{"role":"system","content":system},
                       {"role":"user","content":f"Question: {query}\nSources:\n{passages}"}],
         )

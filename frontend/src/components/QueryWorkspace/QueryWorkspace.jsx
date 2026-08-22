@@ -5,6 +5,7 @@ import VoiceButton from "../VoiceButton/VoiceButton";
 import Transcript from "../Transcript/Transcript";
 import AnswerCard from "../AnswerCard/AnswerCard";
 import SourceCard from "../SourceCard/SourceCard";
+import Pipeline from "../Pipeline/Pipeline";
 import { ragService } from "../../services/ragService";
 
 const LANGUAGES = [
@@ -143,6 +144,15 @@ export default function QueryWorkspace() {
           </div>
         )}
 
+        {(isRecording || isProcessing) && (
+          <div className="mt-6">
+            <Pipeline
+              activeStage={isRecording ? "listening" : activeStage}
+              isProcessing
+            />
+          </div>
+        )}
+
         {lastMessage && !isRecording && (
           <div className="mt-4 max-w-xl mx-auto">
             <Transcript text={lastMessage} />
@@ -151,7 +161,11 @@ export default function QueryWorkspace() {
 
         {isProcessing && !isRecording && (
           <p className="mt-3 text-center font-dm-sans text-[12px] font-medium uppercase tracking-[0.08em] text-secondary" role="status">
-            {activeStage === "stt" ? "Processing speech with Sarvam…" : "Retrieving and grounding answer…"}
+            {activeStage === "transcribing"
+              ? "Transcribing your speech…"
+              : activeStage === "generating"
+                ? "Generating grounded answer…"
+                : "Retrieving relevant context…"}
           </p>
         )}
 
