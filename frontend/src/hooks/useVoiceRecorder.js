@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { isVoiceSupported, recordVoice } from "../services/voiceService";
 
 export function useVoiceRecorder({ onBlob = null } = {}) {
@@ -9,28 +9,15 @@ export function useVoiceRecorder({ onBlob = null } = {}) {
   const [level, setLevel] = useState(0);
   const recorderRef = useRef(null);
   const stopPromiseRef = useRef(null);
-  const rafRef = useRef(null);
 
-  useEffect(() => {
-    if (!isRecording) return undefined;
-    let start = performance.now();
-    const tick = () => {
-      const elapsed = (performance.now() - start) / 1000;
-      const value = 0.35 + Math.abs(Math.sin(elapsed * 3.5)) * 0.5 + Math.random() * 0.15;
-      setLevel(Math.min(1, value));
-      rafRef.current = requestAnimationFrame(tick);
-    };
-    rafRef.current = requestAnimationFrame(tick);
-    return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    };
-  }, [isRecording]);
+  const resetLevel = useCallback(() => setLevel(0), []);
 
   const start = useCallback(async () => {
     setError(null);
     setBlob(null);
     try {
       const { recorder, done } = await recordVoice({
+        onLevel: setLevel,
         onStop: (newBlob) => {
           setBlob(newBlob);
           if (onBlob) onBlob(newBlob);
@@ -51,8 +38,9 @@ export function useVoiceRecorder({ onBlob = null } = {}) {
     const result = await stopPromiseRef.current;
     recorderRef.current = null;
     stopPromiseRef.current = null;
+    resetLevel();
     return result;
-  }, []);
+  }, [resetLevel]);
 
   const cancel = useCallback(() => {
     if (recorderRef.current && recorderRef.current.state !== "inactive") {
@@ -61,7 +49,8 @@ export function useVoiceRecorder({ onBlob = null } = {}) {
     recorderRef.current = null;
     stopPromiseRef.current = null;
     setIsRecording(false);
-  }, []);
+    resetLevel();
+  }, [resetLevel]);
 
   return { isRecording, isSupported, error, blob, level, start, stop, cancel };
 }

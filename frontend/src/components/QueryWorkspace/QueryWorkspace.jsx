@@ -76,6 +76,7 @@ export default function QueryWorkspace() {
   };
 
   const sources = result?.sources || [];
+  const isTranscribing = isProcessing && activeStage === "transcribing";
 
   return (
     <section id="query" className="px-margin-mobile md:px-margin-desktop py-16">
@@ -119,8 +120,14 @@ export default function QueryWorkspace() {
             {isProcessing ? "Thinking…" : "Ask"}
           </button>
         </form>
+        <p className="mt-2 text-right font-dm-sans text-[11px] uppercase tracking-[0.08em] text-on-surface-variant">
+          Press <kbd className="border border-outline-variant rounded px-1.5 py-0.5 font-meta-mono">Enter</kbd> to ask
+        </p>
 
-        <div className="mt-4 flex flex-wrap justify-center gap-2" role="group" aria-label="Voice language">
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-2" role="group" aria-label="Voice language">
+          <span className="font-dm-sans text-[11px] font-medium uppercase tracking-[0.08em] text-secondary mr-1">
+            Voice language
+          </span>
           {LANGUAGES.map((language) => (
             <button
               key={language.code}
@@ -141,6 +148,12 @@ export default function QueryWorkspace() {
         {isRecording && (
           <div className="mt-4 max-w-xl mx-auto">
             <Transcript isRecording isSupported={isSupported} level={level} />
+          </div>
+        )}
+
+        {isTranscribing && !isRecording && (
+          <div className="mt-4 max-w-xl mx-auto">
+            <Transcript isTranscribing />
           </div>
         )}
 

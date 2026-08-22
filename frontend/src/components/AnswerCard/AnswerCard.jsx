@@ -111,9 +111,14 @@ export default function AnswerCard({ result, isProcessing = false, languageCode 
               onClick={listen}
               disabled={audioState === "loading" || !visibleAnswer}
               aria-label={audioState === "playing" ? "Pause answer" : "Listen to answer"}
-              className="chip border border-primary bg-surface text-primary hover:bg-primary hover:text-on-primary transition-colors disabled:opacity-50"
+              className="chip border border-primary bg-surface text-primary hover:bg-primary hover:text-on-primary transition-colors disabled:opacity-50 inline-flex items-center gap-1.5"
             >
-              <span aria-hidden="true">{audioState === "playing" ? "⏸" : "🔊"}</span>
+              <Icon
+                aria-hidden="true"
+                name={audioState === "loading" ? "progress_activity" : audioState === "playing" ? "pause" : audioState === "paused" || audioState === "ready" ? "play" : "volume"}
+                size={14}
+                className={audioState === "loading" ? "animate-spin" : ""}
+              />
               {audioState === "loading" ? "Preparing…" : audioState === "playing" ? "Pause" : audioState === "paused" ? "Resume" : audioState === "ready" ? "Replay" : "Listen"}
             </button>
             {(audioState === "playing" || audioState === "paused") && (

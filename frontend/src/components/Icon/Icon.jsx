@@ -131,6 +131,20 @@ const ICON_PATHS = {
       <circle cx="12" cy="14" r="8" />
     </>
   ),
+  volume: (
+    <>
+      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+      <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+      <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+    </>
+  ),
+  play: <polygon points="6 3 20 12 6 21 6 3" />,
+  pause: (
+    <>
+      <rect x="6" y="4" width="4" height="16" rx="1" />
+      <rect x="14" y="4" width="4" height="16" rx="1" />
+    </>
+  ),
 };
 
 export default function Icon({ name, size = 20, className = "", fill = false }) {

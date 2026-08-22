@@ -230,8 +230,7 @@ class Pipeline:
         }.get(language_code, "I can’t help with that request.")
 
     def to_response_dict(self, result: PipelineResult) -> dict:
-        guard = {"passed": all(s.ok for s in result.stages if s.name == "guardrails") or True, "checks": result.guardrails}
-        guard_passed = all(c.get("passed") for c in guard["checks"])
+        guard_passed = all(c.get("passed", True) for c in result.guardrails)
         return {
             "success": True, "query": result.query,
             "answer": result.answer,
