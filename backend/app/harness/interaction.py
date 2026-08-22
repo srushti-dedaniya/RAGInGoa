@@ -28,12 +28,8 @@ def detect_language(query: str) -> str:
 
 
 def resolve_language(query: str, selected: str | None) -> str:
-    """Preserve an explicit non-English selection; otherwise honor detected script."""
-    detected = detect_language(query)
-    selected = selected if selected in SUPPORTED_LANGUAGES else "en-IN"
-    if selected in {"hi-IN", "mr-IN"}:
-        return selected
-    return detected
+    """Honor an explicit selector; an omitted/invalid selection defaults to English."""
+    return selected if selected in SUPPORTED_LANGUAGES else "en-IN"
 
 
 def is_conversational(query: str) -> bool:

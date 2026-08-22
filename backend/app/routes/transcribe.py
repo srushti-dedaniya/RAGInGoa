@@ -18,7 +18,7 @@ async def transcribe(
     if content_type and content_type not in SUPPORTED_AUDIO_TYPES:
         raise HTTPException(status_code=415, detail=f"unsupported audio type: {file.content_type}")
     if language_code and language_code not in SUPPORTED_STT_LANGUAGES:
-        raise HTTPException(400, "unsupported language; use en-IN, hi-IN, or kok-IN")
+        raise HTTPException(400, "unsupported language; use en-IN, hi-IN, or mr-IN")
     data = await file.read()
     if len(data) > MAX_AUDIO_BYTES:
         raise HTTPException(status_code=413, detail="audio file too large")

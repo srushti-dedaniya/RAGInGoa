@@ -28,25 +28,30 @@ class RetrievalService:
             score_threshold=settings.SCORE_THRESHOLD,
             rerank=settings.RERANK,
         )
-        self._retriever: Retriever | None = None
+        self._retrievers: dict[str, Retriever] = {}
 
     @property
     def retriever(self) -> Retriever:
-        if self._retriever is None:
-            self._retriever = self._build()
-        return self._retriever
+        return self._get_retriever("en-IN")
 
-    def _build(self) -> Retriever:
-        index = load_index(self.settings.index_path, model_name=self.embedder.model_name())
+    def _get_retriever(self, language_code: str) -> Retriever:
+        language_code = language_code if language_code in {"en-IN", "hi-IN", "mr-IN"} else "en-IN"
+        if language_code not in self._retrievers:
+            self._retrievers[language_code] = self._build(language_code)
+        return self._retrievers[language_code]
+
+    def _build(self, language_code: str) -> Retriever:
+        index_path = self.settings.index_path_for(language_code)
+        index = load_index(index_path, model_name=self.embedder.model_name())
         if index is None or index.size() == 0:
             if self.settings.REQUIRE_INDEX:
                 raise RuntimeError(
-                    f"persistent index missing at {self.settings.index_path}; run scripts/build_index.py"
+                    f"persistent {language_code} index missing at {index_path}; run scripts/build_index.py"
                 )
-            index = self._build_from_samples()
+            index = self._build_from_samples(index_path)
         return Retriever(self.embedder, index, self.config)
 
-    def _build_from_samples(self):
+    def _build_from_samples(self, index_path):
         logger.info("no index on disk; building dev index from sample corpus")
         samples = self.settings.sample_data_path
         docs = read_data(samples)
@@ -54,26 +59,30 @@ class RetrievalService:
             self.settings.CHUNK_STRATEGY,
             {"size": self.settings.CHUNK_SIZE, "overlap": self.settings.CHUNK_OVERLAP},
         ).split(docs)
-        return build_index(self.embedder, chunks, self.settings.index_path)
+        return build_index(self.embedder, chunks, index_path)
 
     def is_ready(self) -> bool:
-        return self.retriever.is_ready()
+        return all(self._get_retriever(code).is_ready() for code in ("en-IN", "hi-IN", "mr-IN"))
 
     def index_size(self) -> int:
-        return self.retriever.index.size() if self.retriever.index else 0
+        return sum(self._get_retriever(code).index.size() for code in ("en-IN", "hi-IN", "mr-IN"))
 
     def retrieve(
         self, query: str, top_k: int | None = None, language_code: str = "en-IN"
     ) -> list[dict]:
-        return self.retriever.retrieve(query, top_k=top_k, language_code=language_code)
+        return self._get_retriever(language_code).retrieve(
+            query, top_k=top_k, language_code=language_code
+        )
 
     def details(
         self, query: str, top_k: int | None = None, language_code: str = "en-IN"
     ) -> dict:
-        details = self.retriever.retrieve_with_details(
+        details = self._get_retriever(language_code).retrieve_with_details(
             query, top_k=top_k, language_code=language_code
         )
         details["engine"] = "FAISS"
+        details["language_code"] = language_code
+        details["index_path"] = str(self.settings.index_path_for(language_code))
         return details
 
 
