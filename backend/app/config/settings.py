@@ -58,12 +58,19 @@ class Settings(BaseSettings):
     RERANK: bool = False
 
     # Paths
-    VECTOR_DB_PATH: str = "rag/vector_db/index"
+    DEFAULT_LANGUAGE: str = "en-IN"
+    VECTOR_DB_PATH: str = "rag/vector_db/index/en"
+    VECTOR_DB_PATH_EN: str = "rag/vector_db/index/en"
+    VECTOR_DB_PATH_HI: str = "rag/vector_db/index/hi"
+    VECTOR_DB_PATH_MR: str = "rag/vector_db/index/mr"
     PROCESSED_DATA_DIR: str = "rag/data/processed"
     SAMPLE_DATA_PATH: str = "rag/data/samples/sample_goa_docs.jsonl"
-    DATASET_PATH: str = "rag/data/processed/msmarco_xi.jsonl"
+    DATASET_PATH: str = "rag/data/processed/msmarco_xi_en.jsonl"
+    DATASET_PATH_EN: str = "rag/data/processed/msmarco_xi_en.jsonl"
+    DATASET_PATH_HI: str = "rag/data/processed/msmarco_xi_hi.jsonl"
+    DATASET_PATH_MR: str = "rag/data/processed/msmarco_xi_mr.jsonl"
     DATASET_NAME: str = "ai4bharat/MSMARCO-XI"
-    DATASET_LANGUAGE: str = "hi"
+    DATASET_LANGUAGE: str = "en"
     DATASET_SPLIT: str = "validation"
     DATASET_MAX_RECORDS: int = 5000
     REQUIRE_INDEX: bool = True
@@ -78,7 +85,14 @@ class Settings(BaseSettings):
 
     @property
     def index_path(self) -> Path:
-        return REPO_ROOT / self.VECTOR_DB_PATH
+        return self.index_path_for("en-IN")
+
+    def index_path_for(self, language_code: str) -> Path:
+        relative = {
+            "hi-IN": self.VECTOR_DB_PATH_HI,
+            "mr-IN": self.VECTOR_DB_PATH_MR,
+        }.get(language_code, self.VECTOR_DB_PATH_EN)
+        return REPO_ROOT / relative
 
     @property
     def processed_path(self) -> Path:
@@ -90,7 +104,14 @@ class Settings(BaseSettings):
 
     @property
     def dataset_path(self) -> Path:
-        return REPO_ROOT / self.DATASET_PATH
+        return self.dataset_path_for("en-IN")
+
+    def dataset_path_for(self, language_code: str) -> Path:
+        relative = {
+            "hi-IN": self.DATASET_PATH_HI,
+            "mr-IN": self.DATASET_PATH_MR,
+        }.get(language_code, self.DATASET_PATH_EN)
+        return REPO_ROOT / relative
 
     @property
     def CHUNK_STRATEGY(self) -> str:  # backwards-compatible internal alias

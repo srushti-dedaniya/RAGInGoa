@@ -6,39 +6,53 @@ FROM python:3.10-slim
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONPATH=/app:/rag \
+    PYTHONPATH=/workspace:/rag \
     PORT=8000 \
     REQUIRE_INDEX=true
 
-WORKDIR /app
+WORKDIR /workspace
 
 # System dependencies for faiss-cpu
 RUN apt-get update && apt-get install -y --no-install-recommends libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
 # Core RAG package (sibling of backend/)
-COPY rag/ /rag/
-COPY rag/requirements.txt /app/rag-requirements.txt
+COPY rag/ ./rag/
+COPY rag/requirements.txt ./rag-requirements.txt
 
-COPY backend/requirements.txt /app/requirements.txt
-RUN pip install --no-cache-dir -r /app/rag-requirements.txt -r /app/requirements.txt
+COPY backend/requirements.txt ./requirements.txt
+RUN pip install --no-cache-dir -r ./rag-requirements.txt -r ./requirements.txt
 
 # Pre-download sentence-transformers model to avoid runtime download
 RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')"
 
-# Download dataset and build index at build time
-COPY scripts/ /app/scripts/
-RUN python scripts/download_dataset.py --language hi --split validation --limit 5000 --out rag/data/processed/msmarco_xi.jsonl \
-    && python scripts/build_index.py --strategy sentence --out rag/vector_db/index
+COPY backend/app ./backend/app
+COPY scripts/ ./scripts/
+
+# Download dataset and build index for all supported languages at build time
+ARG MSMARCO_LIMIT=5000
+RUN python scripts/download_dataset.py --language en --split validation --limit ${MSMARCO_LIMIT} && \
+    python scripts/download_dataset.py --language hi --split validation --limit ${MSMARCO_LIMIT} && \
+    python scripts/download_dataset.py --language mr --split validation --limit ${MSMARCO_LIMIT} && \
+    python scripts/build_index.py --language en --strategy sentence && \
+    python scripts/build_index.py --language hi --strategy sentence && \
+    python scripts/build_index.py --language mr --strategy sentence && \
+    test -s rag/data/processed/msmarco_xi_en.jsonl && \
+    test -s rag/data/processed/msmarco_xi_hi.jsonl && \
+    test -s rag/data/processed/msmarco_xi_mr.jsonl && \
+    test -s rag/vector_db/index/en/all-minilm-l6-v2.faiss && \
+    test -s rag/vector_db/index/hi/all-minilm-l6-v2.faiss && \
+    test -s rag/vector_db/index/mr/all-minilm-l6-v2.faiss && \
+    test -s rag/vector_db/index/en/all-minilm-l6-v2_meta.json && \
+    test -s rag/vector_db/index/hi/all-minilm-l6-v2_meta.json && \
+    test -s rag/vector_db/index/mr/all-minilm-l6-v2_meta.json
 
 # Gunicorn config for production
-COPY deployment/backend/gunicorn.conf.py /app/gunicorn.conf.py
-
-COPY backend/app /app/app
+COPY deployment/backend/gunicorn.conf.py /workspace/gunicorn.conf.py
 
 EXPOSE 8000
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD curl -f http://localhost:8000/api/health || exit 1
 
-CMD ["gunicorn", "-c", "/app/gunicorn.conf.py", "app.main:app"]
+CMD ["gunicorn", "-c", "/workspace/gunicorn.conf.py", "backend.app.main:app"]

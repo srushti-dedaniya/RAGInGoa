@@ -24,12 +24,17 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--strategy", default=None, help="chunking strategy")
     parser.add_argument("--out", default=None, help="index output dir")
+    parser.add_argument(
+        "--language", choices=("en", "hi", "mr"), default="en",
+        help="language-specific configured corpus/index to build",
+    )
     args = parser.parse_args(argv)
 
     settings = get_settings()
-    data_paths = args.data or [str(settings.dataset_path)]
+    language_code = {"en": "en-IN", "hi": "hi-IN", "mr": "mr-IN"}[args.language]
+    data_paths = args.data or [str(settings.dataset_path_for(language_code))]
     strategy = args.strategy or settings.CHUNK_STRATEGY
-    out_dir = args.out or str(settings.index_path)
+    out_dir = args.out or str(settings.index_path_for(language_code))
 
     docs = [doc for data_path in data_paths for doc in read_data(data_path)]
     languages = sorted({str(doc.get("metadata", {}).get("language", "unknown")) for doc in docs})

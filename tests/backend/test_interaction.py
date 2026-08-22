@@ -14,7 +14,8 @@ def test_supported_language_detection():
 
 def test_selected_language_is_used_for_latin_input():
     assert resolve_language("What is a corporation?", "mr-IN") == "mr-IN"
-    assert resolve_language("कॉर्पोरेशन क्या है?", "en-IN") == "hi-IN"
+    assert resolve_language("कॉर्पोरेशन क्या है?", "en-IN") == "en-IN"
+    assert resolve_language("कॉर्पोरेशन क्या है?", None) == "en-IN"
 
 
 def test_greeting_and_introduction_are_conversational():
